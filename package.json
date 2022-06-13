@@ -4,9 +4,11 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start": "npx ts-node index.ts"
+    "start": "npx ts-node index.ts | npx s-exify > main.wat",
+    "compile": "npx ts-node index.ts"
   },
   "devDependencies": {
+    "s-exify": "^0.3.2",
     "ts-node": "^10.8.0",
     "typescript": "^4.7.2"
   }

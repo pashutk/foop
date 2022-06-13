@@ -68,6 +68,14 @@ const anyChar: Parser<string> = (input) => {
   }
 };
 
+const eof: Parser<void> = (input) => {
+  if (input.length) {
+    return fail(input, "End of file");
+  } else {
+    return succeed(undefined, input);
+  }
+};
+
 const tryParser =
   <A>(parser: Parser<A>): Parser<A> =>
   (input) => {
@@ -105,7 +113,7 @@ const string =
       const parser = char(c);
       const result = parser(newInput);
       if (result.type === "failure") {
-        return result;
+        return fail(result.input, s);
       }
       values = values + result.value;
       newInput = result.input;
@@ -165,6 +173,19 @@ const seq = <A extends [Parser<any>, ...any]>(parsers: [...A]): Maps<A> =>
     return succeed(values, newInput);
   });
 
+type UnwrapOneOfParser<A> = A extends Parser<infer T> ? T : never;
+
+type UnwrapOneOfParsers<A extends [...any]> = A extends [infer Head, ...infer Tail]
+  ? UnwrapOneOfParser<Head> | UnwrapOneOfParsers<Tail>
+  : never;
+
+type MapOneOfParser<A extends [...any]> = Parser<UnwrapOneOfParsers<A>>;
+
+const oneOf = <A extends [Parser<any>, ...any]>(parsers: [...A]): MapOneOfParser<A> => {
+  const head = parsers[0];
+  return parsers.slice(1).reduce((prev, next) => or(prev, next), head);
+};
+
 const between = <A, L, R>(left: Parser<L>, parser: Parser<A>, right: Parser<R>): Parser<A> =>
   map(seq([left, parser, right]), ([, body]) => body);
 
@@ -175,7 +196,17 @@ const spaces = many(space);
 const trimRight = <A>(parser: Parser<A>): Parser<A> =>
   bind(parser, (a) => bind(spaces, () => of(a)));
 
+const trimLeft = <A>(parser: Parser<A>): Parser<A> => bind(spaces, () => parser);
+
 const symbol = (s: string) => trimRight(string(s));
+
+const lparen = symbol("(");
+
+const rparen = symbol(")");
+
+const lbrace = symbol("{");
+
+const rbrace = symbol("}");
 
 const FunctionKeyword = t("FunctionKeyword");
 // type FunctionKeyword = typeof functionKeyword;
@@ -206,12 +237,27 @@ export type FunctionDeclaration = T<"FunctionDeclaration"> & {
   body: Expression;
 };
 
+type EnumVariant = T<
+  "EnumVariant",
+  {
+    name: string;
+  }
+>;
+
+export type EnumDeclaration = T<
+  "EnumDeclaration",
+  {
+    name: string;
+    variants: EnumVariant[];
+  }
+>;
+
 type FunctionApplication = T<"FunctionApplication"> & {
   name: Identificator;
   params: Expression[];
 };
 
-export type Expression = Value | FunctionApplication | Identificator;
+export type Expression = MatchExp | Value | FunctionApplication | Identificator;
 
 type Int = T<"Int"> & {
   value: string;
@@ -219,16 +265,12 @@ type Int = T<"Int"> & {
 
 type Value = Int;
 
-type ReturnExp = T<"Return"> & {
-  body: Value | FunctionApplication | Identificator;
-};
-
-export type AST = FunctionDeclaration | ReturnExp | Value;
+export type AST = FunctionDeclaration | Value;
 
 const functionParameters: Parser<Identificator[]> = between(
-  symbol("("),
+  lparen,
   sepBy(identificator, symbol(",")),
-  symbol(")")
+  rparen
 );
 
 const digit = regex("digit", /\d/);
@@ -240,33 +282,82 @@ const value: Parser<Value> = trimRight(
   }))
 );
 
-const functionApplicationArg: Parser<Value | FunctionApplication | Identificator> = or(
+const functionApplicationArg: Parser<Expression> = or(
   or(value, (input) => functionApplication(input)),
   identificator
 );
 
 const functionApplication: Parser<FunctionApplication> = map(
-  seq([identificator, symbol("("), sepBy(functionApplicationArg, symbol(",")), symbol(")")]),
-  ([name, , params]) =>
-    ({
-      type: "FunctionApplication",
-      name,
-      params,
-    } as FunctionApplication)
-);
-
-export const functionReturnParser: Parser<ReturnExp> = map(
-  seq([symbol("return"), or(or(value, functionApplication), identificator)]),
-  ([, body]) => ({
-    type: "Return",
-    body,
+  seq([identificator, lparen, sepBy(functionApplicationArg, symbol(",")), rparen]),
+  ([name, , params]) => ({
+    type: "FunctionApplication",
+    name,
+    params,
   })
 );
 
-const functionBody: Parser<FunctionApplication | Value | Identificator> = between(
-  symbol("{"),
-  or(or(functionApplication, value), identificator),
-  symbol("}")
+type MatcherPattern = T<
+  "MatcherPattern",
+  {
+    contructorName: string;
+  }
+>;
+
+type MatcherExp = T<
+  "MatcherExp",
+  {
+    pattern: MatcherPattern;
+    expression: Expression;
+  }
+>;
+
+type MatchExp = T<
+  "MatchExp",
+  {
+    value: Expression;
+    cases: MatcherExp[];
+  }
+>;
+
+const expressionParser: Parser<Expression> = oneOf([
+  (input: string) => matchExpParser(input),
+  functionApplication,
+  value,
+  identificator,
+]);
+
+const matcherPatternParser: Parser<MatcherPattern> = map(identificatorName, (name) => ({
+  type: "MatcherPattern",
+  contructorName: name,
+}));
+
+const matcherParser: Parser<MatcherExp> = map(
+  seq([matcherPatternParser, trimRight(string("=>")), expressionParser]),
+  ([pattern, , expression]) => ({
+    type: "MatcherExp",
+    pattern,
+    expression,
+  })
+);
+
+const matchExpParser: Parser<MatchExp> = map(
+  seq([
+    symbol("match"),
+    between(lparen, expressionParser, rparen),
+    between(lbrace, sepBy1(matcherParser, symbol(",")), rbrace),
+  ]),
+  ([_matchKeyword, value, cases]) => ({
+    type: "MatchExp",
+    value,
+    cases,
+  })
+);
+
+const functionBody: Parser<Expression> = between(
+  lbrace,
+  expressionParser,
+  // or(or(functionApplication, value), identificator),
+  rbrace
 );
 
 const functionDefinitionParser: Parser<FunctionDeclaration> = map(
@@ -279,4 +370,31 @@ const functionDefinitionParser: Parser<FunctionDeclaration> = map(
   })
 );
 
-export const module = many1(functionDefinitionParser);
+type EnumKeyword = T<"EnumKeyword">;
+const EnumKeyword = t("EnumKeyword");
+
+const enumKeyword: Parser<EnumKeyword> = map(symbol("enum"), () => EnumKeyword);
+
+const enumVariantParser: Parser<EnumVariant> = map(identificatorName, (name) => ({
+  type: "EnumVariant",
+  name,
+}));
+
+const enumDefinitionParser: Parser<EnumDeclaration> = map(
+  seq([
+    enumKeyword,
+    identificatorName,
+    between(symbol("{"), sepBy(enumVariantParser, symbol(",")), symbol("}")),
+  ]),
+  ([, name, variants]) => ({
+    type: "EnumDeclaration",
+    name,
+    variants,
+  })
+);
+
+const topLevelDefinition = or(functionDefinitionParser, enumDefinitionParser);
+
+export const module = bind(trimLeft(many1(topLevelDefinition)), (result) =>
+  bind(eof, () => of(result))
+);
