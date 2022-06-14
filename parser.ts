@@ -237,6 +237,9 @@ export type FunctionDeclaration = T<"FunctionDeclaration"> & {
   body: Expression;
 };
 
+export const isFunctionDeclaration = (a: { type: string }): a is FunctionDeclaration =>
+  a.type === "FunctionDeclaration";
+
 type EnumVariant = T<
   "EnumVariant",
   {
@@ -251,6 +254,9 @@ export type EnumDeclaration = T<
     variants: EnumVariant[];
   }
 >;
+
+export const isEnumDeclaration = (a: { type: string }): a is EnumDeclaration =>
+  a.type === "EnumDeclaration";
 
 type FunctionApplication = T<"FunctionApplication"> & {
   name: Identificator;
@@ -392,6 +398,8 @@ const enumDefinitionParser: Parser<EnumDeclaration> = map(
     variants,
   })
 );
+
+export type TopLevelDefinition = FunctionDeclaration | EnumDeclaration;
 
 const topLevelDefinition = or(functionDefinitionParser, enumDefinitionParser);
 
