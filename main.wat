@@ -57,79 +57,13 @@
     (local.get $result)
   )
   (func
-    $boolToInt
-    (param $bool i32)
+    $some1
     (result i32)
-    (local $var_39587 i32)
-    (local.set
-      $var_39587
-      (local.get $bool)
-    )
-    (if
-      (result i32)
-      (i32.eq
-        (local.get $var_39587)
-        (i32.const 0)
-      )
-      (then
-        (i32.const 1)
-      )
-      (else
-        (if
-          (result i32)
-          (i32.eq
-            (local.get $var_39587)
-            (i32.const 1)
-          )
-          (then
-            (i32.const 0)
-          )
-          (else
-            (unreachable)
-          )
-        )
-      )
-    )
-  )
-  (export
-    "boolToInt"
-    (func $boolToInt)
-  )
-  (func
-    $incbool
-    (param $a i32)
-    (result i32)
-    (local.get $a)
-    (i32.const 0)
-    (call $boolToInt)
-    (i32.add)
-  )
-  (export
-    "incbool"
-    (func $incbool)
-  )
-  (func
-    $inc
-    (param $a i32)
-    (result i32)
-    (local.get $a)
     (i32.const 1)
-    (i32.add)
+    (call $Some)
   )
   (export
-    "inc"
-    (func $inc)
-  )
-  (func
-    $main
-    (result i32)
-    (i32.const 2)
-    (call $inc)
-    (i32.const 3)
-    (i32.add)
-  )
-  (export
-    "main"
-    (func $main)
+    "some1"
+    (func $some1)
   )
 )

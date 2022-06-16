@@ -5,7 +5,8 @@
   "license": "MIT",
   "scripts": {
     "start": "npx ts-node index.ts | npx s-exify > main.wat",
-    "compile": "npx ts-node index.ts"
+    "compile": "npx ts-node index.ts",
+    "ast": "npx ts-node index.ts ast"
   },
   "devDependencies": {
     "s-exify": "^0.3.2",

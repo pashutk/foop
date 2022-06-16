@@ -19,13 +19,13 @@ export const renderSexp = (s: SExp): string =>
 const compileExpression =
   (ctx: Ctx) =>
   (exp: Expression): SExp[] => {
-    switch (exp.type) {
+    switch (exp._type) {
       case "Int":
         return [sexp("i32.const", exp.value)];
 
       case "Identificator":
         if (exp.name in ctx.enums) {
-          return [sexp("i32.const", ctx.enums[exp.name]?.toString(10) ?? "-1")];
+          return [sexp("i32.const", ctx.enums[exp.name]?.numericId.toString(10) ?? "-1")];
         }
         return [sexp("local.get", "$" + exp.name)];
 
@@ -42,7 +42,7 @@ const compileExpression =
               sexp(
                 "i32.eq",
                 sexp("local.get", varName),
-                sexp("i32.const", ctx.enums[constr]?.toString(10) ?? "-1")
+                sexp("i32.const", ctx.enums[constr]?.numericId.toString(10) ?? "-1")
               ),
               sexp("then", ...compileExpression(ctx)(expression)),
               sexp("else", elseClause)
@@ -178,7 +178,13 @@ const memoryManagement = (): SExp[] => {
 
 type Ctx = {
   // <VariantName, IntId>
-  enums: Record<string, number>;
+  enums: Record<
+    string,
+    {
+      numericId: number;
+      params: unknown[];
+    }
+  >;
 };
 
 export const compileModule = (tlds: TopLevelDefinition[]): SExp => {
@@ -186,8 +192,12 @@ export const compileModule = (tlds: TopLevelDefinition[]): SExp => {
   const enums = tlds.filter(isEnumDeclaration);
 
   const enumsRecord = Object.fromEntries(
-    enums.flatMap((e) => e.variants.map(({ name }) => name)).map((name, index) => [name, index])
+    enums
+      .flatMap((e) => e.variants)
+      .map(({ name, params }, index) => [name, { numericId: index, params }])
   );
+
+  console.dir(enumsRecord, { depth: null });
 
   const expressions = functions.flatMap(compileFunctionDefinition({ enums: enumsRecord }));
   return sexp("module", ...memoryManagement(), ...expressions);

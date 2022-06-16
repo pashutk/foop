@@ -3,9 +3,9 @@ export const absurd = (_: never) => {
 };
 
 export type T<A, Body = {}> = {
-  type: A;
+  _type: A;
 } & Body;
 
 export function t<A extends string>(a: A): T<A> {
-  return { type: a };
+  return { _type: a };
 }
