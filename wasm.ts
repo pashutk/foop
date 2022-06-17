@@ -4,6 +4,7 @@ import {
   isEnumDeclaration,
   isFunctionDeclaration,
   TopLevelDefinition,
+  WasmType,
 } from "./parser";
 import { absurd } from "./utils";
 
@@ -25,33 +26,59 @@ const compileExpression =
 
       case "Identificator":
         if (exp.name in ctx.enums) {
-          return [sexp("i32.const", ctx.enums[exp.name]?.numericId.toString(10) ?? "-1")];
+          return [sexp("call", "$" + exp.name)];
         }
         return [sexp("local.get", "$" + exp.name)];
 
+      // Currently match expr works only with constructors as an argument
       case "MatchExp": {
         const varName = `$var_${Math.floor(Math.random() * 100000).toString(10)}`;
 
-        const cases = exp.cases.map((c) => [c.pattern.contructorName, c.expression] as const);
+        const cases = exp.cases.map((c) => [c.pattern, c.expression] as const);
         cases.reverse();
-        const compiledMatch = cases.reduce(
-          (elseClause, [constr, expression]) =>
-            sexp(
+        const localsForConstructors: SExp[] = [];
+        const compiledMatch = cases.reduce((elseClause, [pattern, expression]) => {
+          if (pattern._type === "MatcherConstructorPattern") {
+            const locals = pattern.params.map((varName) => sexp("local", "$" + varName, "i32"));
+            if (locals.length) {
+              localsForConstructors.push(...locals);
+            }
+            return sexp(
               "if",
               sexp("result", "i32"),
               sexp(
                 "i32.eq",
-                sexp("local.get", varName),
-                sexp("i32.const", ctx.enums[constr]?.numericId.toString(10) ?? "-1")
+                sexp("i32.load8_u", sexp("local.get", varName)),
+                sexp("i32.const", ctx.enums[pattern.contructorName]?.numericId.toString(10) ?? "-1")
               ),
+              sexp(
+                "then",
+                ...pattern.params.flatMap((name, index) => {
+                  const address = sexp(
+                    "i32.add",
+                    sexp("local.get", varName),
+                    sexp("i32.const", (index + 1).toString(10))
+                  );
+                  return [sexp("local.set", "$" + name, sexp("i32.load8_u", address))];
+                }),
+                ...compileExpression(ctx)(expression)
+              ),
+              sexp("else", elseClause)
+            );
+          } else {
+            return sexp(
+              "if",
+              sexp("result", "i32"),
+              sexp("i32.eq", sexp("local.get", varName), sexp("i32.const", pattern.value.value)),
               sexp("then", ...compileExpression(ctx)(expression)),
               sexp("else", elseClause)
-            ),
-          sexp("unreachable")
-        );
+            );
+          }
+        }, sexp("unreachable"));
 
         return [
           sexp("local", varName, "i32"),
+          ...localsForConstructors,
           sexp("local.set", varName, ...compileExpression(ctx)(exp.value)),
           compiledMatch,
         ];
@@ -64,6 +91,10 @@ const compileExpression =
           // poorman stdlib
           case "add":
             instructions.push(sexp("i32.add"));
+            break;
+
+          case "eq":
+            instructions.push(sexp("i32.eq"));
             break;
 
           case "sub":
@@ -125,7 +156,7 @@ const memoryManagement = (): SExp[] => {
       "$mem_alloc",
       sexp("param", "$bytes", "i32"),
       sexp("result", "i32"),
-      sexp("local", "$result", "i32"),
+      sexp("local", "$_result", "i32"),
       // do the memory needs to grow?
       sexp(
         "if",
@@ -163,7 +194,7 @@ const memoryManagement = (): SExp[] => {
         )
       ),
       // save result
-      sexp("local.set", "$result", sexp("global.get", "$mem_next_free")),
+      sexp("local.set", "$_result", sexp("global.get", "$mem_next_free")),
       // adjust mem_next_free
       sexp(
         "global.set",
@@ -171,7 +202,41 @@ const memoryManagement = (): SExp[] => {
         sexp("i32.add", sexp("local.get", "$bytes"), sexp("global.get", "$mem_next_free"))
       ),
       // return
-      sexp("local.get", "$result")
+      sexp("local.get", "$_result")
+    ),
+  ];
+};
+
+const compileEnumConstructor = (name: string, numericId: number, params: WasmType[]): SExp[] => {
+  return [
+    sexp(
+      "func",
+      "$" + name,
+      ...params.map((param, index) => sexp("param", "$param" + index, param.type)),
+      sexp("result", "i32"),
+      sexp("local", "$struct_start_address", "i32"),
+
+      // struct_start_address = malloc(1 + params.length) where 1 byte is for constructor id
+      sexp("i32.const", (params.length + 1).toString(10)),
+      sexp("call", "$mem_alloc"),
+      sexp("local.set", "$struct_start_address"),
+
+      // byte 1 is constructor id
+      sexp(
+        "i32.store",
+        sexp("local.get", "$struct_start_address"),
+        sexp("i32.const", numericId.toString())
+      ),
+      ...params.map((_, index) => {
+        const address = sexp(
+          "i32.add",
+          sexp("local.get", "$struct_start_address"),
+          sexp("i32.const", (index + 1).toString(10))
+        );
+        return sexp("i32.store", address, sexp("local.get", "$param" + index));
+      }),
+
+      sexp("local.get", "$struct_start_address")
     ),
   ];
 };
@@ -182,23 +247,27 @@ type Ctx = {
     string,
     {
       numericId: number;
-      params: unknown[];
+      params: WasmType[];
     }
   >;
 };
 
 export const compileModule = (tlds: TopLevelDefinition[]): SExp => {
   const functions = tlds.filter(isFunctionDeclaration);
-  const enums = tlds.filter(isEnumDeclaration);
+  const enumDeclarations = tlds.filter(isEnumDeclaration);
 
   const enumsRecord = Object.fromEntries(
-    enums
+    enumDeclarations
       .flatMap((e) => e.variants)
       .map(({ name, params }, index) => [name, { numericId: index, params }])
   );
 
-  console.dir(enumsRecord, { depth: null });
+  // console.dir(enumsRecord, { depth: null });
+
+  const enums = Object.entries(enumsRecord).flatMap(([name, { numericId, params }]) =>
+    compileEnumConstructor(name, numericId, params)
+  );
 
   const expressions = functions.flatMap(compileFunctionDefinition({ enums: enumsRecord }));
-  return sexp("module", ...memoryManagement(), ...expressions);
+  return sexp("module", ...memoryManagement(), ...enums, ...expressions);
 };

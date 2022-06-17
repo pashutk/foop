@@ -3,13 +3,55 @@ import { compileModule, renderSexp } from "./wasm";
 import { argv } from "process";
 
 export const code = `
-enum Option {
-  Some(I32),
-  None
+enum Bool {
+  False
+  True
 }
 
-function some1() {
-  Some(1)
+enum List {
+  Cons(I32, I32)
+  Nil
+}
+
+function sumListInner(list, result) {
+  match(list) {
+    Cons(head, tail) => sumListInner(tail, add(head, result))
+    Nil => result
+  }
+}
+
+function sumList(list) {
+  sumListInner(list, 0)
+}
+
+function inc(a) {
+  add(a, 1)
+}
+
+function equal(a, b) {
+  match(eq(a, b)) {
+    1 => True
+    0 => False
+  }
+}
+
+function range(start, end) {
+  match(equal(inc(end), start)) {
+    True => Nil
+    False => Cons(start, range(inc(start), end))
+  }
+}
+
+function rangeFromZero(end) {
+  range(0, end)
+}
+
+function sumOfNNaturals(n) {
+  sumList(rangeFromZero(n))
+}
+
+function main() {
+  sumOfNNaturals(13)
 }
 `;
 

@@ -274,16 +274,16 @@ export type FunctionDeclaration = T<"FunctionDeclaration"> & {
 export const isFunctionDeclaration = (a: { _type: string }): a is FunctionDeclaration =>
   a._type === "FunctionDeclaration";
 
-type WasmType = T<
+export type WasmType = T<
   "WasmType",
   {
-    type: "I32";
+    type: "i32";
   }
 >;
 
 const WasmTypeParser: Parser<WasmType> = map(symbol("I32"), () => ({
   _type: "WasmType",
-  type: "I32",
+  type: "i32",
 }));
 
 type EnumVariant = T<
@@ -347,13 +347,22 @@ const functionApplication: Parser<FunctionApplication> = map(
   })
 );
 
-type MatcherPattern = T<
-  "MatcherPattern",
+type MatcherValuePattern = T<
+  "MatcherValuePattern",
+  {
+    value: Value;
+  }
+>;
+
+type MatcherConstructorPattern = T<
+  "MatcherConstructorPattern",
   {
     contructorName: string;
     params: string[];
   }
 >;
+
+type MatcherPattern = MatcherConstructorPattern | MatcherValuePattern;
 
 type MatcherExp = T<
   "MatcherExp",
@@ -378,13 +387,23 @@ const expressionParser: Parser<Expression> = oneOf([
   identificator,
 ]);
 
-const matcherPatternParser: Parser<MatcherPattern> = map(
+const matcherConstructorPatternParser: Parser<MatcherConstructorPattern> = map(
   seq([identificatorName, optional(betweenParens(sepBy1(identificatorName, symbol(","))))]),
   ([name, boundParams]) => ({
-    _type: "MatcherPattern",
+    _type: "MatcherConstructorPattern",
     contructorName: name,
     params: boundParams.type === "Some" ? boundParams.value : [],
   })
+);
+
+const matcherValuePatternParser: Parser<MatcherValuePattern> = map(value, (value) => ({
+  _type: "MatcherValuePattern",
+  value,
+}));
+
+const matcherPatternParser: Parser<MatcherPattern> = or(
+  matcherConstructorPatternParser,
+  matcherValuePatternParser
 );
 
 const matcherParser: Parser<MatcherExp> = map(
@@ -426,7 +445,7 @@ const EnumKeyword = t("EnumKeyword");
 const enumKeyword: Parser<EnumKeyword> = map(symbol("enum"), () => EnumKeyword);
 
 const enumVariantParser: Parser<EnumVariant> = map(
-  seq([identificatorName, optional(betweenParens(many1(WasmTypeParser)))]),
+  seq([identificatorName, optional(betweenParens(sepBy1(WasmTypeParser, symbol(","))))]),
   ([name, params]) => ({
     _type: "EnumVariant",
     name,
@@ -438,7 +457,7 @@ const enumDefinitionParser: Parser<EnumDeclaration> = map(
   seq([
     enumKeyword,
     identificatorName,
-    between(symbol("{"), sepBy(enumVariantParser, symbol(",")), symbol("}")),
+    between(symbol("{"), many1(enumVariantParser), symbol("}")),
   ]),
   ([, name, variants]) => ({
     _type: "EnumDeclaration",
