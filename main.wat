@@ -1,4 +1,18 @@
 (module
+  (import
+    "wasi_unstable"
+    "fd_write"
+    (func
+      $fd_write
+      (param
+        i32
+        i32
+        i32
+        i32
+      )
+      (result i32)
+    )
+  )
   (memory $mem 1)
   (global
     $mem_max_addr
@@ -57,18 +71,73 @@
     (local.get $_result)
   )
   (func
-    $eqz
-    (param $a i32)
+    $Cons
+    (param $param0 i32)
+    (param $param1 i32)
     (result i32)
-    (i32.eqz
+    (local $struct_start_address i32)
+    (i32.const 12)
+    (call $mem_alloc)
+    (local.set $struct_start_address)
+    (i32.store
+      (local.get $struct_start_address)
+      (i32.const 0)
+    )
+    (i32.store
+      (i32.add
+        (local.get $struct_start_address)
+        (i32.const 4)
+      )
+      (local.get $param0)
+    )
+    (i32.store
+      (i32.add
+        (local.get $struct_start_address)
+        (i32.const 8)
+      )
+      (local.get $param1)
+    )
+    (local.get $struct_start_address)
+  )
+  (func
+    $Nil
+    (result i32)
+    (local $struct_start_address i32)
+    (i32.const 4)
+    (call $mem_alloc)
+    (local.set $struct_start_address)
+    (i32.store
+      (local.get $struct_start_address)
+      (i32.const 1)
+    )
+    (local.get $struct_start_address)
+  )
+  (func
+    $add
+    (param $a i32)
+    (param $b i32)
+    (result i32)
+    (i32.add
       (local.get $a)
+      (local.get $b)
+    )
+  )
+  (func
+    $eq
+    (param $a i32)
+    (param $b i32)
+    (result i32)
+    (i32.eq
+      (local.get $a)
+      (local.get $b)
     )
   )
   (func
     $main
     (result i32)
-    (i32.const 0)
-    (call $eqz)
+    (i32.const 1)
+    (i32.const 2)
+    (call $eq)
   )
   (export
     "main"

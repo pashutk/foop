@@ -2,7 +2,59 @@ import * as parser from "./parser";
 import { compileModule, renderSexp } from "./wasm";
 import { argv } from "process";
 
+const stdlib = `
+wasm add(a, b) {
+  (i32.add (local.get $a) (local.get $b))
+}
+
+wasm eq(a, b) {
+  (i32.eq (local.get $a) (local.get $b))
+}
+
+`;
+
 export const code = `
+${stdlib}
+
+enum List {
+  Cons(I32, I32)
+  Nil
+}
+
+wasm eq(a, b) {
+  (i32.eq (local.get $a) (local.get $b))
+}
+
+function main() {
+  eq(1, 2)
+}
+`;
+
+export const code5 = `
+enum ListInt {
+  Cons(I32, I32)
+  Nil
+}
+
+wasm add(a, b) {
+  (i32.add (local.get $a) (local.get $b))
+}
+
+wasm printI32(a)
+
+function sumList(list, result) {
+  match(list) {
+    Cons(head, tail) => sumList(tail, add(result, head))
+    Nil => result
+  }
+}
+
+function main() {
+  sumList(Cons(33, Cons(12, Nil)), 0)
+}
+`;
+
+export const code4 = `
 wasm eqz(a) {
   (i32.eqz (local.get $a))
 }

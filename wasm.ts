@@ -59,7 +59,7 @@ const compileExpression =
               sexp("result", "i32"),
               sexp(
                 "i32.eq",
-                sexp("i32.load8_u", sexp("local.get", varName)),
+                sexp("i32.load", sexp("local.get", varName)),
                 sexp("i32.const", ctx.enums[pattern.contructorName]?.numericId.toString(10) ?? "-1")
               ),
               sexp(
@@ -68,9 +68,9 @@ const compileExpression =
                   const address = sexp(
                     "i32.add",
                     sexp("local.get", varName),
-                    sexp("i32.const", (index + 1).toString(10))
+                    sexp("i32.const", ((index + 1) * 4).toString(10))
                   );
-                  return [sexp("local.set", "$" + name, sexp("i32.load8_u", address))];
+                  return [sexp("local.set", "$" + name, sexp("i32.load", address))];
                 }),
                 ...compileExpression(ctx)(expression)
               ),
@@ -212,6 +212,18 @@ const memoryManagement = (): SExp[] => {
   ];
 };
 
+const imports: SExp[] = [
+  // (import "wasi_unstable" "fd_write"
+  //   (func $fd_write (param i32 i32 i32 i32)
+  //                   (result i32)))
+  sexp(
+    "import",
+    '"wasi_unstable"',
+    '"fd_write"',
+    sexp("func", "$fd_write", sexp("param", "i32", "i32", "i32", "i32"), sexp("result", "i32"))
+  ),
+];
+
 const compileEnumConstructor = (name: string, numericId: number, params: WasmType[]): SExp[] => {
   return [
     sexp(
@@ -221,12 +233,12 @@ const compileEnumConstructor = (name: string, numericId: number, params: WasmTyp
       sexp("result", "i32"),
       sexp("local", "$struct_start_address", "i32"),
 
-      // struct_start_address = malloc(1 + params.length) where 1 byte is for constructor id
-      sexp("i32.const", (params.length + 1).toString(10)),
+      // struct_start_address = malloc(1 * 4 + params.length * 4) where first i32 is for constructor id
+      sexp("i32.const", ((params.length + 1) * 4).toString(10)),
       sexp("call", "$mem_alloc"),
       sexp("local.set", "$struct_start_address"),
 
-      // byte 1 is constructor id
+      // mem[0] is constructor id
       sexp(
         "i32.store",
         sexp("local.get", "$struct_start_address"),
@@ -236,7 +248,7 @@ const compileEnumConstructor = (name: string, numericId: number, params: WasmTyp
         const address = sexp(
           "i32.add",
           sexp("local.get", "$struct_start_address"),
-          sexp("i32.const", (index + 1).toString(10))
+          sexp("i32.const", ((index + 1) * 4).toString(10))
         );
         return sexp("i32.store", address, sexp("local.get", "$param" + index));
       }),
@@ -277,5 +289,12 @@ export const compileModule = (tlds: TopLevelDefinition[]): SExp => {
   const ffiFunctions = ffiDeclataions.flatMap(compileFfiDefinition);
 
   const expressions = functions.flatMap(compileFunctionDefinition({ enums: enumsRecord }));
-  return sexp("module", ...memoryManagement(), ...enums, ...ffiFunctions, ...expressions);
+  return sexp(
+    "module",
+    ...imports,
+    ...memoryManagement(),
+    ...enums,
+    ...ffiFunctions,
+    ...expressions
+  );
 };
