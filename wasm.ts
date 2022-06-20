@@ -146,6 +146,8 @@ const memoryManagement = (): SExp[] => {
   return [
     //   (memory $mem 1)                                ;; start with 1 page (64K)
     sexp("memory", "$mem", "1"),
+    // (export "memory" (memory 0))
+    sexp("export", '"memory"', sexp("memory", "0")),
     //   (global $max_addr (mut i32) (i32.const 65536)) ;; initial heap size (64K)
     sexp("global", "$mem_max_addr", sexp("mut", "i32"), sexp("i32.const", "65536")),
     sexp(

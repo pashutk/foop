@@ -11,6 +11,10 @@ wasm eq(a, b) {
   (i32.eq (local.get $a) (local.get $b))
 }
 
+function inc(a) {
+  add(a, 1)
+}
+
 `;
 
 export const code = `
@@ -21,12 +25,65 @@ enum List {
   Nil
 }
 
-wasm eq(a, b) {
-  (i32.eq (local.get $a) (local.get $b))
+wasm malloc(bytes) {
+  (local.get $bytes)
+  (call $mem_alloc)
+}
+
+wasm setByte(address, value, retvalue) {
+  (i32.store (local.get $address) (local.get $value))
+  (local.get $retvalue)
+}
+
+function asciiListToStrInner(address, list, index) {
+  match(list) {
+    Cons(a, tail) => asciiListToStrInner(setByte(add(address, index), a, address), tail, inc(index))
+    Nil => address
+  }
+}
+
+function asciiListToStr(list) {
+  asciiListToStrInner(malloc(length(list)), list, 0)
+}
+
+function lengthInner(list, result) {
+  match(list) {
+    Cons(a, tail) => lengthInner(tail, inc(result))
+    Nil => result
+  }
+}
+
+function length(list) {
+  lengthInner(list, 0)
+}
+
+function data() {
+  Cons(83, Cons(117, Cons(115, Cons(10, Nil))))
+}
+
+enum IOVec {
+  IOVec(I32, I32)
+}
+
+enum NWritten {
+  NWritten
+}
+
+wasm log(iovecAddress) {
+  (call $fd_write
+    (i32.const 1)
+    (local.get $iovecAddress)
+    (i32.const 1)
+    (call $NWritten)
+  )
+}
+
+function logList(list) {
+  log(add(IOVec(asciiListToStr(list), length(list)), 4))
 }
 
 function main() {
-  eq(1, 2)
+  logList(data())
 }
 `;
 
