@@ -57,130 +57,18 @@
     (local.get $_result)
   )
   (func
-    $AA
-    (param $param0 i32)
+    $eqz
+    (param $a i32)
     (result i32)
-    (local $struct_start_address i32)
-    (i32.const 2)
-    (call $mem_alloc)
-    (local.set $struct_start_address)
-    (i32.store
-      (local.get $struct_start_address)
-      (i32.const 0)
+    (i32.eqz
+      (local.get $a)
     )
-    (i32.store
-      (i32.add
-        (local.get $struct_start_address)
-        (i32.const 1)
-      )
-      (local.get $param0)
-    )
-    (local.get $struct_start_address)
-  )
-  (func
-    $BB
-    (result i32)
-    (local $struct_start_address i32)
-    (i32.const 1)
-    (call $mem_alloc)
-    (local.set $struct_start_address)
-    (i32.store
-      (local.get $struct_start_address)
-      (i32.const 1)
-    )
-    (local.get $struct_start_address)
   )
   (func
     $main
     (result i32)
-    (local $var_21423 i32)
-    (local $a i32)
-    (local.set
-      $var_21423
-      (call $BB)
-      (call $AA)
-    )
-    (if
-      (result i32)
-      (i32.eq
-        (i32.load8_u
-          (local.get $var_21423)
-        )
-        (i32.const 0)
-      )
-      (then
-        (local.set
-          $a
-          (i32.load8_u
-            (i32.add
-              (local.get $var_21423)
-              (i32.const 1)
-            )
-          )
-        )
-        (local $var_22943 i32)
-        (local $b i32)
-        (local.set
-          $var_22943
-          (local.get $a)
-        )
-        (if
-          (result i32)
-          (i32.eq
-            (i32.load8_u
-              (local.get $var_22943)
-            )
-            (i32.const 0)
-          )
-          (then
-            (local.set
-              $b
-              (i32.load8_u
-                (i32.add
-                  (local.get $var_22943)
-                  (i32.const 1)
-                )
-              )
-            )
-            (i32.const 2)
-          )
-          (else
-            (if
-              (result i32)
-              (i32.eq
-                (i32.load8_u
-                  (local.get $var_22943)
-                )
-                (i32.const 1)
-              )
-              (then
-                (i32.const 0)
-              )
-              (else
-                (unreachable)
-              )
-            )
-          )
-        )
-      )
-      (else
-        (if
-          (result i32)
-          (i32.eq
-            (i32.load8_u
-              (local.get $var_21423)
-            )
-            (i32.const 1)
-          )
-          (then
-            (i32.const 1)
-          )
-          (else
-            (unreachable)
-          )
-        )
-      )
-    )
+    (i32.const 0)
+    (call $eqz)
   )
   (export
     "main"

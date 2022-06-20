@@ -1,7 +1,9 @@
 import {
   Expression,
+  FfiDeclaration,
   FunctionDeclaration,
   isEnumDeclaration,
+  isFfiDeclaration,
   isFunctionDeclaration,
   TopLevelDefinition,
   WasmType,
@@ -96,25 +98,7 @@ const compileExpression =
       case "FunctionApplication": {
         const instructions: SExp[] = [];
         exp.params.forEach((param) => instructions.push(...compileExpression(ctx)(param)));
-        switch (exp.name.name) {
-          // poorman stdlib
-          case "add":
-            instructions.push(sexp("i32.add"));
-            break;
-
-          case "eq":
-            instructions.push(sexp("i32.eq"));
-            break;
-
-          case "sub":
-            instructions.push(sexp("i32.sub"));
-            break;
-
-          // its not an stdlib function, try to call it
-          default:
-            instructions.push(sexp("call", "$" + exp.name.name));
-            break;
-        }
+        instructions.push(sexp("call", "$" + exp.name.name));
         return instructions;
       }
 
@@ -141,6 +125,18 @@ const compileFunctionDefinition = (ctx: Ctx) => (fn: FunctionDeclaration) => {
   const exportExpression = sexp("export", `"${fn.name}"`, sexp("func", "$" + fn.name));
 
   return [funcExpression, exportExpression];
+};
+
+const compileFfiDefinition = (ffi: FfiDeclaration): SExp[] => {
+  return [
+    sexp(
+      "func",
+      "$" + ffi.name,
+      ...ffi.params.map((param) => sexp("param", "$" + param.name, "i32")),
+      sexp("result", "i32"),
+      ffi.body.content
+    ),
+  ];
 };
 
 // Alloc-only mem mgmt
@@ -264,6 +260,7 @@ type Ctx = {
 export const compileModule = (tlds: TopLevelDefinition[]): SExp => {
   const functions = tlds.filter(isFunctionDeclaration);
   const enumDeclarations = tlds.filter(isEnumDeclaration);
+  const ffiDeclataions = tlds.filter(isFfiDeclaration);
 
   const enumsRecord = Object.fromEntries(
     enumDeclarations
@@ -277,6 +274,8 @@ export const compileModule = (tlds: TopLevelDefinition[]): SExp => {
     compileEnumConstructor(name, numericId, params)
   );
 
+  const ffiFunctions = ffiDeclataions.flatMap(compileFfiDefinition);
+
   const expressions = functions.flatMap(compileFunctionDefinition({ enums: enumsRecord }));
-  return sexp("module", ...memoryManagement(), ...enums, ...expressions);
+  return sexp("module", ...memoryManagement(), ...enums, ...ffiFunctions, ...expressions);
 };

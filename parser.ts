@@ -134,6 +134,8 @@ const regex = (description: string, regex: RegExp): Parser<string> =>
 
 const char = (c: string) => satisfy(c, (a) => a === c);
 
+const notChar = (c: string) => satisfy(c, (a) => a !== c);
+
 const string =
   (s: string): Parser<string> =>
   (input) => {
@@ -302,6 +304,28 @@ export type EnumDeclaration = T<
   }
 >;
 
+type FfiParam = T<
+  "FfiParam",
+  {
+    name: string;
+  }
+>;
+
+type FfiBody = T<
+  "FfiBody",
+  {
+    content: string;
+  }
+>;
+
+export type FfiDeclaration = T<
+  "FfiDeclaration",
+  { name: string; params: FfiParam[]; body: FfiBody }
+>;
+
+export const isFfiDeclaration = (a: { _type: string }): a is FfiDeclaration =>
+  a._type === "FfiDeclaration";
+
 export const isEnumDeclaration = (a: { _type: string }): a is EnumDeclaration =>
   a._type === "EnumDeclaration";
 
@@ -466,9 +490,31 @@ const enumDefinitionParser: Parser<EnumDeclaration> = map(
   })
 );
 
-export type TopLevelDefinition = FunctionDeclaration | EnumDeclaration;
+const ffiDefinitionParser: Parser<FfiDeclaration> = map(
+  seq([
+    symbol("wasm"),
+    identificatorName,
+    betweenParens(sepBy(identificatorName, symbol(","))),
+    betweenBraces(many(notChar("}"))),
+  ]),
+  ([_, name, params, body]) => ({
+    _type: "FfiDeclaration",
+    name,
+    params: params.map((name) => ({ _type: "FfiParam", name })),
+    body: {
+      _type: "FfiBody",
+      content: body.join(""),
+    },
+  })
+);
 
-const topLevelDefinition = or(functionDefinitionParser, enumDefinitionParser);
+export type TopLevelDefinition = FunctionDeclaration | EnumDeclaration | FfiDeclaration;
+
+const topLevelDefinition: Parser<TopLevelDefinition> = oneOf([
+  functionDefinitionParser,
+  enumDefinitionParser,
+  ffiDefinitionParser,
+]);
 
 export const module = bind(trimLeft(many1(topLevelDefinition)), (result) =>
   bind(eof, () => of(result))

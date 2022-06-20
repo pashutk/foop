@@ -3,6 +3,16 @@ import { compileModule, renderSexp } from "./wasm";
 import { argv } from "process";
 
 export const code = `
+wasm eqz(a) {
+  (i32.eqz (local.get $a))
+}
+
+function main() {
+  eqz(0)
+}
+`;
+
+export const code3 = `
 enum Bool {
   True
   False
