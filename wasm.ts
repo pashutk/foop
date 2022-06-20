@@ -39,6 +39,15 @@ const compileExpression =
         const localsForConstructors: SExp[] = [];
         const compiledMatch = cases.reduce((elseClause, [pattern, expression]) => {
           if (pattern._type === "MatcherConstructorPattern") {
+            if (pattern.contructorName === "otherwise") {
+              return sexp(
+                "if",
+                sexp("result", "i32"),
+                sexp("i32.const", "1"),
+                sexp("then", ...compileExpression(ctx)(expression)),
+                sexp("else", sexp("unreachable"))
+              );
+            }
             const locals = pattern.params.map((varName) => sexp("local", "$" + varName, "i32"));
             if (locals.length) {
               localsForConstructors.push(...locals);

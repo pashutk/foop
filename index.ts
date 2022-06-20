@@ -4,6 +4,54 @@ import { argv } from "process";
 
 export const code = `
 enum Bool {
+  True
+  False
+}
+
+enum Option {
+  Some(I32)
+  None
+}
+
+enum List {
+  Cons(I32, I32)
+  Nil
+}
+
+function data() {
+  Cons(Some(True), Nil)
+}
+
+function main() {
+  match(data()) {
+    Cons(consVal, tail) => match(consVal) {
+      Some()
+    }
+    Nil => 0
+  }
+}
+
+function intToBool(a) {
+  match(a) {
+    0 => False
+    otherwise => True
+  }
+}
+
+function boolToInt(a) {
+  match(a) {
+    True => 1
+    False => 0
+  }
+}
+
+function main() {
+  boolToInt(True)
+}
+`;
+
+export const code2 = `
+enum Bool {
   False
   True
 }
