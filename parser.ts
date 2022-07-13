@@ -340,7 +340,11 @@ type Int = T<"Int"> & {
   value: string;
 };
 
-type Value = Int;
+type Str = T<"Str"> & {
+  value: string;
+};
+
+type Value = Int | Str;
 
 export type AST = FunctionDeclaration | Value;
 
@@ -351,10 +355,23 @@ const functionParameters: Parser<Identificator[]> = betweenParens(
 const digit = regex("digit", /\d/);
 
 const value: Parser<Value> = trimRight(
-  map(many1(digit), (digits) => ({
-    _type: "Int",
-    value: digits.join(""),
-  }))
+  or(
+    map(many1(digit), (digits) => ({
+      _type: "Int",
+      value: digits.join(""),
+    })),
+    map(
+      between(
+        symbol("'"),
+        many(satisfy("ascii sym", (sym) => sym.charCodeAt(0) < 128 && sym !== "'")),
+        char("'")
+      ),
+      (strs) => ({
+        _type: "Str",
+        value: strs.join(""),
+      })
+    )
+  )
 );
 
 const functionApplicationArg: Parser<Expression> = or(

@@ -26,6 +26,17 @@ const compileExpression =
       case "Int":
         return [sexp("i32.const", exp.value)];
 
+      case "Str":
+        return [
+          exp.value
+            .split("")
+            .reduceRight(
+              (prev, curr) =>
+                sexp("call", "$Cons", sexp("i32.const", curr.charCodeAt(0).toString()), prev),
+              sexp("call", "$Cons", sexp("i32.const", "10"), sexp("call", "$Nil"))
+            ),
+        ];
+
       case "Identificator":
         if (exp.name in ctx.enums) {
           return [sexp("call", "$" + exp.name)];

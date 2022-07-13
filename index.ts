@@ -18,6 +18,21 @@ function inc(a) {
 `;
 
 export const code = `
+enum List {
+  Cons(I32, I32)
+  Nil
+}
+
+function x() {
+  Cons(10, Nil)
+}
+
+function main() {
+  'hello world!'
+}
+`;
+
+export const code6 = `
 ${stdlib}
 
 enum List {
@@ -58,7 +73,7 @@ function length(list) {
 }
 
 function data() {
-  Cons(83, Cons(117, Cons(115, Cons(10, Nil))))
+  Cons(83, Cons(83, Cons(117, Cons(115, Cons(10, Nil))))
 }
 
 enum IOVec {
@@ -74,7 +89,7 @@ wasm log(iovecAddress) {
     (i32.const 1)
     (local.get $iovecAddress)
     (i32.const 1)
-    (call $NWritten)
+    (i32.const 200)
   )
 }
 
