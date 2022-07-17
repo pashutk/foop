@@ -4,13 +4,19 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start": "npx ts-node index.ts | npx s-exify > main.wat",
+    "start": "ts-node index.ts | s-exify > main.wat && yarn wat2wasm",
     "compile": "npx ts-node index.ts",
-    "ast": "npx ts-node index.ts ast"
+    "wat2wasm": "wat2wasm main.wat -o main.wasm",
+    "ast": "npx ts-node index.ts ast",
+    "server": "npx http-server --mimetypes ./mime.types",
+    "watch": "nodemon --watch \"./**\" --ext \"ts\" --exec \"ts-node index.ts | s-exify > main.wat && wat2wasm main.wat -o main.wasm\""
   },
-  "devDependencies": {
+  "dependencies": {
+    "http-server": "^14.1.1",
+    "nodemon": "^2.0.19",
     "s-exify": "^0.3.2",
     "ts-node": "^10.8.0",
-    "typescript": "^4.7.2"
+    "typescript": "^4.7.2",
+    "wabt": "^1.0.29"
   }
 }

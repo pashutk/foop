@@ -11,13 +11,119 @@ wasm eq(a, b) {
   (i32.eq (local.get $a) (local.get $b))
 }
 
+wasm lt(a, b) {
+  (i32.lt_s (local.get $a) (local.get $b))
+}
+
 function inc(a) {
   add(a, 1)
 }
 
+wasm dec(a) {
+  (i32.sub (local.get $a) (i32.const -1))
+}
+
+wasm div(a, b) {
+  (i32.div_s (local.get $a) (local.get $b))
+}
+
+enum List {
+  Cons(I32, I32)
+  Nil
+}
+
+wasm malloc(bytes) {
+  (local.get $bytes)
+  (call $mem_alloc)
+}
+
+wasm setByte(address, value, retvalue) {
+  (i32.store (local.get $address) (local.get $value))
+  (local.get $retvalue)
+}
+
+function asciiListToStrInner(address, list, index) {
+  match(list) {
+    Cons(a, tail) => asciiListToStrInner(setByte(add(address, index), a, address), tail, inc(index))
+    Nil => address
+  }
+}
+
+function asciiListToStr(list) {
+  asciiListToStrInner(malloc(listLength(list)), list, 0)
+}
+
+function sysListLengthInner__(list, result) {
+  match(list) {
+    Cons(a, tail) => sysListLengthInner__(tail, inc(result))
+    Nil => result
+  }
+}
+
+function listLength(list) {
+  sysListLengthInner__(list, 0)
+}
+
+enum IOVec {
+  IOVec(I32, I32)
+}
+
+enum NWritten {
+  NWritten
+}
+
+wasm logIOVec(iovecAddress) {
+  (call $fd_write
+    (i32.const 1)
+    (local.get $iovecAddress)
+    (i32.const 1)
+    (i32.const 200)
+  )
+}
+
+function printString(list) {
+  logIOVec(add(IOVec(asciiListToStr(list), listLength(list)), 4))
+}
+
+function printI32__(num, result) {
+  match(lt(num, 10)) {
+    1 => Cons(add(48, num), result)
+    otherwise => printI32__(div(num, 10), Cons(add(48, num), result))
+  }
+}
+
+function printI32(num) {
+  printI32__(num, Cons(10, Nil))
+}
+
 `;
+// ; (i32.load (local.get $address))
 
 export const code = `
+${stdlib}
+
+function main() {
+  '123'
+}
+`;
+
+export const code8 = `
+${stdlib}
+
+
+function rw(index, stop, discard) {
+  match(eq(index, stop)) {
+    1 => 0
+    otherwise => rw(inc(index), stop, printString(Cons(index, Nil)))
+  }
+}
+
+function main() {
+  '1'
+}
+`;
+
+export const code7 = `
 enum List {
   Cons(I32, I32)
   Nil
