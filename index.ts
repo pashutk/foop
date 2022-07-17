@@ -102,8 +102,10 @@ function printI32(num) {
 export const code = `
 ${stdlib}
 
-function main() {
-  '123'
+function _start() {
+  let str = 'Sus'
+  let newStr = Cons(50, str)
+  printString(newStr)
 }
 `;
 
@@ -163,8 +165,12 @@ function asciiListToStrInner(address, list, index) {
   }
 }
 
+function ceil4(num) {
+  
+}
+
 function asciiListToStr(list) {
-  asciiListToStrInner(malloc(length(list)), list, 0)
+  asciiListToStrInner(malloc(ceil4(length(list))), list, 0)
 }
 
 function lengthInner(list, result) {

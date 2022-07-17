@@ -262,7 +262,7 @@ const letter = regex("letter", /\p{L}/u);
 const alphanum = regex("alphanum", /\w/);
 
 const identificatorName: Parser<string> = trimRight(
-  map(seq([letter, many(alphanum)]), ([head, tail]) => head + tail.join(""))
+  map(seq([or(letter, char("_")), many(alphanum)]), ([head, tail]) => head + tail.join(""))
 );
 
 const identificator: Parser<Identificator> = map(identificatorName, Identificator);
@@ -270,7 +270,7 @@ const identificator: Parser<Identificator> = map(identificatorName, Identificato
 export type FunctionDeclaration = T<"FunctionDeclaration"> & {
   name: string;
   params: Identificator[];
-  body: Expression;
+  body: FunctionBody;
 };
 
 export const isFunctionDeclaration = (a: { _type: string }): a is FunctionDeclaration =>
@@ -465,9 +465,32 @@ const matchExpParser: Parser<MatchExp> = map(
   })
 );
 
-const functionBody: Parser<Expression> = betweenBraces(
-  expressionParser
-  // or(or(functionApplication, value), identificator),
+type LetBinding = T<"LetBinding"> & {
+  name: string;
+  expression: Expression;
+};
+
+type FunctionBody = T<"FunctionBody"> & {
+  bindings: LetBinding[];
+  expression: Expression;
+};
+
+const letBinding: Parser<LetBinding> = map(
+  seq([symbol("let"), identificatorName, symbol("="), expressionParser]),
+  ([_letKeyword, name, _eqSym, expression]) => ({
+    _type: "LetBinding",
+    name,
+    expression,
+  })
+);
+
+const functionBody: Parser<FunctionBody> = map(
+  betweenBraces(seq([many(letBinding), expressionParser])),
+  ([bindings, expression]) => ({
+    _type: "FunctionBody",
+    bindings,
+    expression,
+  })
 );
 
 const functionDefinitionParser: Parser<FunctionDeclaration> = map(

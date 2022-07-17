@@ -177,7 +177,7 @@
           const instance = await WebAssembly.instantiate(module, moduleImports);
 
           wasiPolyfill.setModuleInstance(instance);
-          instance.exports.main();
+          instance.exports._start();
         })();
       }
 

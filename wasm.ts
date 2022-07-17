@@ -127,8 +127,16 @@ const compileFunctionDefinition = (ctx: Ctx) => (fn: FunctionDeclaration) => {
   fn.params.forEach(({ name }) => def.push(sexp("param", "$" + name, "i32")));
   // Result is always i32 for now
   def.push(sexp("result", "i32"));
+  // declare let binding local vars
+  fn.body.bindings.forEach((b) => {
+    def.push(sexp("local", "$" + b.name, "i32"));
+  });
+  fn.body.bindings.forEach((b) => {
+    def.push(...compileExpression(ctx)(b.expression));
+    def.push(sexp("local.set", "$" + b.name));
+  });
   // Compile body expression
-  def.push(...compileExpression(ctx)(fn.body));
+  def.push(...compileExpression(ctx)(fn.body.expression));
 
   const funcExpression = sexp("func", ...def);
 

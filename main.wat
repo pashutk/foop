@@ -256,18 +256,18 @@
     (param $list i32)
     (param $index i32)
     (result i32)
-    (local $var_38267 i32)
+    (local $var_95332 i32)
     (local $a i32)
     (local $tail i32)
     (local.set
-      $var_38267
+      $var_95332
       (local.get $list)
     )
     (if
       (result i32)
       (i32.eq
         (i32.load
-          (local.get $var_38267)
+          (local.get $var_95332)
         )
         (i32.const 0)
       )
@@ -276,7 +276,7 @@
           $a
           (i32.load
             (i32.add
-              (local.get $var_38267)
+              (local.get $var_95332)
               (i32.const 4)
             )
           )
@@ -285,7 +285,7 @@
           $tail
           (i32.load
             (i32.add
-              (local.get $var_38267)
+              (local.get $var_95332)
               (i32.const 8)
             )
           )
@@ -306,7 +306,7 @@
           (result i32)
           (i32.eq
             (i32.load
-              (local.get $var_38267)
+              (local.get $var_95332)
             )
             (i32.const 1)
           )
@@ -344,18 +344,18 @@
     (param $list i32)
     (param $result i32)
     (result i32)
-    (local $var_23288 i32)
+    (local $var_4313 i32)
     (local $a i32)
     (local $tail i32)
     (local.set
-      $var_23288
+      $var_4313
       (local.get $list)
     )
     (if
       (result i32)
       (i32.eq
         (i32.load
-          (local.get $var_23288)
+          (local.get $var_4313)
         )
         (i32.const 0)
       )
@@ -364,7 +364,7 @@
           $a
           (i32.load
             (i32.add
-              (local.get $var_23288)
+              (local.get $var_4313)
               (i32.const 4)
             )
           )
@@ -373,7 +373,7 @@
           $tail
           (i32.load
             (i32.add
-              (local.get $var_23288)
+              (local.get $var_4313)
               (i32.const 8)
             )
           )
@@ -388,7 +388,7 @@
           (result i32)
           (i32.eq
             (i32.load
-              (local.get $var_23288)
+              (local.get $var_4313)
             )
             (i32.const 1)
           )
@@ -440,9 +440,9 @@
     (param $num i32)
     (param $result i32)
     (result i32)
-    (local $var_15540 i32)
+    (local $var_37885 i32)
     (local.set
-      $var_15540
+      $var_37885
       (local.get $num)
       (i32.const 10)
       (call $lt)
@@ -450,7 +450,7 @@
     (if
       (result i32)
       (i32.eq
-        (local.get $var_15540)
+        (local.get $var_37885)
         (i32.const 1)
       )
       (then
@@ -501,17 +501,19 @@
     (func $printI32)
   )
   (func
-    $main
+    $_start
     (result i32)
+    (local $str i32)
+    (local $newStr i32)
     (call
       $Cons
-      (i32.const 49)
+      (i32.const 83)
       (call
         $Cons
-        (i32.const 50)
+        (i32.const 117)
         (call
           $Cons
-          (i32.const 51)
+          (i32.const 115)
           (call
             $Cons
             (i32.const 10)
@@ -520,9 +522,16 @@
         )
       )
     )
+    (local.set $str)
+    (i32.const 50)
+    (local.get $str)
+    (call $Cons)
+    (local.set $newStr)
+    (local.get $newStr)
+    (call $printString)
   )
   (export
-    "main"
-    (func $main)
+    "_start"
+    (func $_start)
   )
 )
