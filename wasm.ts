@@ -21,56 +21,61 @@ export const renderSexp = (s: SExp): string =>
 
 const compileExpression =
   (ctx: Ctx) =>
-  (exp: Expression): SExp[] => {
+  (exp: Expression): { localNames: string[]; exp: SExp[] } => {
     switch (exp._type) {
       case "Int":
-        return [sexp("i32.const", exp.value)];
+        return { localNames: [], exp: [sexp("i32.const", exp.value)] };
 
       case "Str":
-        return [
-          exp.value
-            .split("")
-            .reduceRight(
-              (prev, curr) =>
-                sexp("call", "$Cons", sexp("i32.const", curr.charCodeAt(0).toString()), prev),
-              sexp("call", "$Cons", sexp("i32.const", "10"), sexp("call", "$Nil"))
-            ),
-        ];
+        return {
+          localNames: [],
+          exp: [
+            exp.value
+              .split("")
+              .reduceRight(
+                (prev, curr) =>
+                  sexp("call", "$Cons", sexp("i32.const", curr.charCodeAt(0).toString()), prev),
+                sexp("call", "$Cons", sexp("i32.const", "10"), sexp("call", "$Nil"))
+              ),
+          ],
+        };
 
       case "Identificator":
         if (exp.name in ctx.enums) {
-          return [sexp("call", "$" + exp.name)];
+          return { localNames: [], exp: [sexp("call", "$" + exp.name)] };
         }
-        return [sexp("local.get", "$" + exp.name)];
+        return { localNames: [], exp: [sexp("local.get", "$" + exp.name)] };
 
       // Currently match expr works only with constructors as an argument
       case "MatchExp": {
-        const varName = `$var_${Math.floor(Math.random() * 100000).toString(10)}`;
+        const varName = `var_${Math.floor(Math.random() * 100000).toString(10)}`;
 
         const cases = exp.cases.map((c) => [c.pattern, c.expression] as const);
         cases.reverse();
-        const localsForConstructors: SExp[] = [];
+        const locals: string[] = [];
         const compiledMatch = cases.reduce((elseClause, [pattern, expression]) => {
+          const { localNames, exp: compiledExp } = compileExpression(ctx)(expression);
+          locals.push(...localNames);
           if (pattern._type === "MatcherConstructorPattern") {
             if (pattern.contructorName === "otherwise") {
               return sexp(
                 "if",
                 sexp("result", "i32"),
                 sexp("i32.const", "1"),
-                sexp("then", ...compileExpression(ctx)(expression)),
+                sexp("then", ...compiledExp),
                 sexp("else", sexp("unreachable"))
               );
             }
-            const locals = pattern.params.map((varName) => sexp("local", "$" + varName, "i32"));
-            if (locals.length) {
-              localsForConstructors.push(...locals);
+
+            if (pattern.params) {
+              locals.push(...pattern.params);
             }
             return sexp(
               "if",
               sexp("result", "i32"),
               sexp(
                 "i32.eq",
-                sexp("i32.load", sexp("local.get", varName)),
+                sexp("i32.load", sexp("local.get", "$" + varName)),
                 sexp("i32.const", ctx.enums[pattern.contructorName]?.numericId.toString(10) ?? "-1")
               ),
               sexp(
@@ -78,12 +83,12 @@ const compileExpression =
                 ...pattern.params.flatMap((name, index) => {
                   const address = sexp(
                     "i32.add",
-                    sexp("local.get", varName),
+                    sexp("local.get", "$" + varName),
                     sexp("i32.const", ((index + 1) * 4).toString(10))
                   );
                   return [sexp("local.set", "$" + name, sexp("i32.load", address))];
                 }),
-                ...compileExpression(ctx)(expression)
+                ...compiledExp
               ),
               sexp("else", elseClause)
             );
@@ -91,26 +96,39 @@ const compileExpression =
             return sexp(
               "if",
               sexp("result", "i32"),
-              sexp("i32.eq", sexp("local.get", varName), sexp("i32.const", pattern.value.value)),
-              sexp("then", ...compileExpression(ctx)(expression)),
+              sexp(
+                "i32.eq",
+                sexp("local.get", "$" + varName),
+                sexp("i32.const", pattern.value.value)
+              ),
+              sexp("then", ...compiledExp),
               sexp("else", elseClause)
             );
           }
         }, sexp("unreachable"));
 
-        return [
-          sexp("local", varName, "i32"),
-          ...localsForConstructors,
-          sexp("local.set", varName, ...compileExpression(ctx)(exp.value)),
-          compiledMatch,
-        ];
+        return {
+          localNames: [varName, ...locals],
+          exp: [
+            sexp("local.set", "$" + varName, ...compileExpression(ctx)(exp.value).exp),
+            compiledMatch,
+          ],
+        };
       }
 
       case "FunctionApplication": {
         const instructions: SExp[] = [];
-        exp.params.forEach((param) => instructions.push(...compileExpression(ctx)(param)));
+        const locals: string[] = [];
+        exp.params.forEach((param) => {
+          const { localNames, exp } = compileExpression(ctx)(param);
+          instructions.push(...exp);
+          locals.push(...localNames);
+        });
         instructions.push(sexp("call", "$" + exp.name.name));
-        return instructions;
+        return {
+          localNames: locals,
+          exp: instructions,
+        };
       }
 
       default:
@@ -127,16 +145,32 @@ const compileFunctionDefinition = (ctx: Ctx) => (fn: FunctionDeclaration) => {
   fn.params.forEach(({ name }) => def.push(sexp("param", "$" + name, "i32")));
   // Result is always i32 for now
   def.push(sexp("result", "i32"));
+
+  const compiledBindings = fn.body.bindings.map((b) => {
+    const { localNames, exp } = compileExpression(ctx)(b.expression);
+    return { name: b.name, exp, localNames };
+  });
+  compiledBindings.forEach(({ localNames }) => {
+    localNames.forEach((name) => {
+      def.push(sexp("local", "$" + name, "i32"));
+    });
+  });
   // declare let binding local vars
   fn.body.bindings.forEach((b) => {
     def.push(sexp("local", "$" + b.name, "i32"));
   });
-  fn.body.bindings.forEach((b) => {
-    def.push(...compileExpression(ctx)(b.expression));
-    def.push(sexp("local.set", "$" + b.name));
+
+  const compiledBody = compileExpression(ctx)(fn.body.expression);
+  compiledBody.localNames.forEach((name) => {
+    def.push(sexp("local", "$" + name, "i32"));
+  });
+
+  compiledBindings.forEach((cb) => {
+    def.push(...cb.exp);
+    def.push(sexp("local.set", "$" + cb.name));
   });
   // Compile body expression
-  def.push(...compileExpression(ctx)(fn.body.expression));
+  def.push(...compiledBody.exp);
 
   const funcExpression = sexp("func", ...def);
 

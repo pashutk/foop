@@ -100,12 +100,30 @@ function printI32(num) {
 // ; (i32.load (local.get $address))
 
 export const code = `
+enum List {
+  Cons(I32, I32)
+  Nil
+}
+
+function _start() {
+  let val = Cons(2, Nil)
+  match(val) {
+    Cons(a, b) => a
+    Nil => 0
+  }
+}
+`;
+
+export const code9 = `
 ${stdlib}
 
 function _start() {
   let str = 'Sus'
   let newStr = Cons(50, str)
-  printString(newStr)
+  match(newStr) {
+    Cons(a, b) => a
+    Nil => 0
+  }
 }
 `;
 
