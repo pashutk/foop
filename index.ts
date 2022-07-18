@@ -7,12 +7,39 @@ wasm add(a, b) {
   (i32.add (local.get $a) (local.get $b))
 }
 
+wasm sub(a, b) {
+  (i32.sub (local.get $a) (local.get $b))
+}
+
 wasm eq(a, b) {
   (i32.eq (local.get $a) (local.get $b))
 }
 
-wasm lt(a, b) {
+function isZero(a) {
+  match(eq(a, 0)) {
+    1 => True
+    otherwise => False
+  }
+}
+
+wasm _lt(a, b) {
   (i32.lt_s (local.get $a) (local.get $b))
+}
+
+enum Bool {
+  False
+  True
+}
+
+function lt(a, b) {
+  match(_lt(a, b)) {
+    1 => True
+    otherwise => False
+  }
+}
+
+wasm rem(a, b) {
+  (i32.rem_s (local.get $a) (local.get $b))
 }
 
 function inc(a) {
@@ -43,15 +70,21 @@ wasm setByte(address, value, retvalue) {
 }
 
 function asciiListToStrInner(address, list, index) {
+  let byteAddr = add(address, index)
   match(list) {
-    Cons(a, tail) => asciiListToStrInner(setByte(add(address, index), a, address), tail, inc(index))
+    Cons(charCode, tail) => asciiListToStrInner(setByte(byteAddr, charCode, address), tail, inc(index))
     Nil => address
   }
 }
 
 function asciiListToStr(list) {
-  asciiListToStrInner(malloc(listLength(list)), list, 0)
+  let memsize = add(listLength(list), 4)
+  let memstart = malloc(memsize)
+  let offset = rem(memstart, 4)
+  let address = add(memstart, sub(4, offset))
+  asciiListToStrInner(address, list, 0)
 }
+
 
 function sysListLengthInner__(list, result) {
   match(list) {
@@ -68,10 +101,6 @@ enum IOVec {
   IOVec(I32, I32)
 }
 
-enum NWritten {
-  NWritten
-}
-
 wasm logIOVec(iovecAddress) {
   (call $fd_write
     (i32.const 1)
@@ -81,25 +110,50 @@ wasm logIOVec(iovecAddress) {
   )
 }
 
-function printString(list) {
-  logIOVec(add(IOVec(asciiListToStr(list), listLength(list)), 4))
+function constructorDataAddress(constructorAddress) {
+  add(constructorAddress, 4)
 }
 
-function printI32__(num, result) {
+function alignToFourBytes() {
+  let a = malloc(0)
+  let b = rem(a, 4)
+  let c = sub(4, b)
+  let d = malloc(c)
+  0
+}
+
+function printString(list) {
+  let stringDataAddress = asciiListToStr(list)
+  let nothing = alignToFourBytes()
+  let iovec = IOVec(stringDataAddress, listLength(list))
+  let iovecDataAddress = constructorDataAddress(iovec)
+  logIOVec(iovecDataAddress)
+}
+
+function _showI32(num, result) {
+  let charCode = add(48, num)
   match(lt(num, 10)) {
-    1 => Cons(add(48, num), result)
-    otherwise => printI32__(div(num, 10), Cons(add(48, num), result))
+    True => Cons(charCode, result)
+    False => _showI32(div(num, 10), Cons(add(48, rem(num, 10)), result))
   }
 }
 
-function printI32(num) {
-  printI32__(num, Cons(10, Nil))
+function showI32(num) {
+  _showI32(num, Cons(10, Nil))
 }
 
 `;
 // ; (i32.load (local.get $address))
 
 export const code = `
+${stdlib}
+
+function _start() {
+  printString(showI32(199))
+}
+`;
+
+export const code10 = `
 enum List {
   Cons(I32, I32)
   Nil

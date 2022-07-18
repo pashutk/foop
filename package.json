@@ -9,7 +9,8 @@
     "wat2wasm": "wat2wasm main.wat -o main.wasm",
     "ast": "npx ts-node index.ts ast",
     "server": "npx http-server --mimetypes ./mime.types",
-    "watch": "nodemon --watch \"./**\" --ext \"ts\" --exec \"ts-node index.ts | s-exify > main.wat && wat2wasm main.wat -o main.wasm\""
+    "watch": "nodemon --watch \"./**\" --ext \"ts\" --exec \"ts-node index.ts | s-exify > main.wat && wat2wasm main.wat -o main.wasm\"",
+    "watchWasmtime": "nodemon --watch \"./**\" --ext \"ts\" --exec \"ts-node index.ts | s-exify > main.wat && wat2wasm main.wat -o main.wasm && wasmtime main.wasm\""
   },
   "dependencies": {
     "http-server": "^14.1.1",
