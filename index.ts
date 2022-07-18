@@ -26,13 +26,31 @@ wasm _lt(a, b) {
   (i32.lt_s (local.get $a) (local.get $b))
 }
 
+wasm _ge(a, b) {
+  (i32.ge_s (local.get $a) (local.get $b))
+}
+
 enum Bool {
   False
   True
 }
 
+function equal(a, b) {
+  match(eq(a, b)) {
+    1 => True
+    otherwise => False
+  }
+}
+
 function lt(a, b) {
   match(_lt(a, b)) {
+    1 => True
+    otherwise => False
+  }
+}
+
+function ge(a, b) {
+  match(_ge(a, b)) {
     1 => True
     otherwise => False
   }
@@ -146,6 +164,59 @@ function showI32(num) {
 // ; (i32.load (local.get $address))
 
 export const code = `
+${stdlib}
+
+function range(start, end, step) {
+  match(ge(start, end)) {
+    True => Nil
+    False => Cons(start, range(add(start, step), end, step))
+  }
+}
+
+function _removeMultiples(list, n, result) {
+  match(list) {
+    Cons(head, tail) => match(isZero(rem(head, n))) {
+      True => _removeMultiples(tail, n, result)
+      False => Cons(head, _removeMultiples(tail, n, result))
+    }
+    Nil => result
+  }
+}
+
+function removeMultiples(list, n) {
+  _removeMultiples(list, n, Nil)
+}
+
+function _eratosthenes(list, result) {
+  match(list) {
+    Cons(head, tail) => _eratosthenes(removeMultiples(tail, head), Cons(head, result))
+    Nil => result
+  }
+}
+
+function eratosthenes(n) {
+  let list = range(2, n, 1)
+  _eratosthenes(list, Nil)
+}
+
+function printInt(n, retvalue) {
+  let nothing = printString(showI32(n))
+  retvalue
+}
+
+function printListOfInts(list) {
+  match(list) {
+    Cons(n, tail) => printInt(n, printListOfInts(tail))
+    Nil => 0
+  }
+}
+
+function _start() {
+  printListOfInts(eratosthenes(100))
+}
+`;
+
+export const code11 = `
 ${stdlib}
 
 function _start() {

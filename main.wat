@@ -212,6 +212,16 @@
     )
   )
   (func
+    $_ge
+    (param $a i32)
+    (param $b i32)
+    (result i32)
+    (i32.ge_s
+      (local.get $a)
+      (local.get $b)
+    )
+  )
+  (func
     $rem
     (param $a i32)
     (param $b i32)
@@ -275,9 +285,9 @@
     $isZero
     (param $a i32)
     (result i32)
-    (local $var_77702 i32)
+    (local $var_643 i32)
     (local.set
-      $var_77702
+      $var_643
       (local.get $a)
       (i32.const 0)
       (call $eq)
@@ -285,7 +295,7 @@
     (if
       (result i32)
       (i32.eq
-        (local.get $var_77702)
+        (local.get $var_643)
         (i32.const 1)
       )
       (then
@@ -310,13 +320,52 @@
     (func $isZero)
   )
   (func
+    $equal
+    (param $a i32)
+    (param $b i32)
+    (result i32)
+    (local $var_27175 i32)
+    (local.set
+      $var_27175
+      (local.get $a)
+      (local.get $b)
+      (call $eq)
+    )
+    (if
+      (result i32)
+      (i32.eq
+        (local.get $var_27175)
+        (i32.const 1)
+      )
+      (then
+        (call $True)
+      )
+      (else
+        (if
+          (result i32)
+          (i32.const 1)
+          (then
+            (call $False)
+          )
+          (else
+            (unreachable)
+          )
+        )
+      )
+    )
+  )
+  (export
+    "equal"
+    (func $equal)
+  )
+  (func
     $lt
     (param $a i32)
     (param $b i32)
     (result i32)
-    (local $var_58491 i32)
+    (local $var_15096 i32)
     (local.set
-      $var_58491
+      $var_15096
       (local.get $a)
       (local.get $b)
       (call $_lt)
@@ -324,7 +373,7 @@
     (if
       (result i32)
       (i32.eq
-        (local.get $var_58491)
+        (local.get $var_15096)
         (i32.const 1)
       )
       (then
@@ -349,6 +398,45 @@
     (func $lt)
   )
   (func
+    $ge
+    (param $a i32)
+    (param $b i32)
+    (result i32)
+    (local $var_53337 i32)
+    (local.set
+      $var_53337
+      (local.get $a)
+      (local.get $b)
+      (call $_ge)
+    )
+    (if
+      (result i32)
+      (i32.eq
+        (local.get $var_53337)
+        (i32.const 1)
+      )
+      (then
+        (call $True)
+      )
+      (else
+        (if
+          (result i32)
+          (i32.const 1)
+          (then
+            (call $False)
+          )
+          (else
+            (unreachable)
+          )
+        )
+      )
+    )
+  )
+  (export
+    "ge"
+    (func $ge)
+  )
+  (func
     $inc
     (param $a i32)
     (result i32)
@@ -367,7 +455,7 @@
     (param $index i32)
     (result i32)
     (local $byteAddr i32)
-    (local $var_52392 i32)
+    (local $var_62489 i32)
     (local $charCode i32)
     (local $tail i32)
     (local.get $address)
@@ -375,14 +463,14 @@
     (call $add)
     (local.set $byteAddr)
     (local.set
-      $var_52392
+      $var_62489
       (local.get $list)
     )
     (if
       (result i32)
       (i32.eq
         (i32.load
-          (local.get $var_52392)
+          (local.get $var_62489)
         )
         (i32.const 2)
       )
@@ -391,7 +479,7 @@
           $charCode
           (i32.load
             (i32.add
-              (local.get $var_52392)
+              (local.get $var_62489)
               (i32.const 4)
             )
           )
@@ -400,7 +488,7 @@
           $tail
           (i32.load
             (i32.add
-              (local.get $var_52392)
+              (local.get $var_62489)
               (i32.const 8)
             )
           )
@@ -419,7 +507,7 @@
           (result i32)
           (i32.eq
             (i32.load
-              (local.get $var_52392)
+              (local.get $var_62489)
             )
             (i32.const 3)
           )
@@ -477,18 +565,18 @@
     (param $list i32)
     (param $result i32)
     (result i32)
-    (local $var_59091 i32)
+    (local $var_31314 i32)
     (local $a i32)
     (local $tail i32)
     (local.set
-      $var_59091
+      $var_31314
       (local.get $list)
     )
     (if
       (result i32)
       (i32.eq
         (i32.load
-          (local.get $var_59091)
+          (local.get $var_31314)
         )
         (i32.const 2)
       )
@@ -497,7 +585,7 @@
           $a
           (i32.load
             (i32.add
-              (local.get $var_59091)
+              (local.get $var_31314)
               (i32.const 4)
             )
           )
@@ -506,7 +594,7 @@
           $tail
           (i32.load
             (i32.add
-              (local.get $var_59091)
+              (local.get $var_31314)
               (i32.const 8)
             )
           )
@@ -521,7 +609,7 @@
           (result i32)
           (i32.eq
             (i32.load
-              (local.get $var_59091)
+              (local.get $var_31314)
             )
             (i32.const 3)
           )
@@ -624,13 +712,13 @@
     (param $result i32)
     (result i32)
     (local $charCode i32)
-    (local $var_12267 i32)
+    (local $var_57543 i32)
     (i32.const 48)
     (local.get $num)
     (call $add)
     (local.set $charCode)
     (local.set
-      $var_12267
+      $var_57543
       (local.get $num)
       (i32.const 10)
       (call $lt)
@@ -639,7 +727,7 @@
       (result i32)
       (i32.eq
         (i32.load
-          (local.get $var_12267)
+          (local.get $var_57543)
         )
         (i32.const 1)
       )
@@ -653,7 +741,7 @@
           (result i32)
           (i32.eq
             (i32.load
-              (local.get $var_12267)
+              (local.get $var_57543)
             )
             (i32.const 0)
           )
@@ -696,11 +784,358 @@
     (func $showI32)
   )
   (func
-    $_start
+    $range
+    (param $start i32)
+    (param $end i32)
+    (param $step i32)
     (result i32)
-    (i32.const 199)
+    (local $var_91452 i32)
+    (local.set
+      $var_91452
+      (local.get $start)
+      (local.get $end)
+      (call $ge)
+    )
+    (if
+      (result i32)
+      (i32.eq
+        (i32.load
+          (local.get $var_91452)
+        )
+        (i32.const 1)
+      )
+      (then
+        (call $Nil)
+      )
+      (else
+        (if
+          (result i32)
+          (i32.eq
+            (i32.load
+              (local.get $var_91452)
+            )
+            (i32.const 0)
+          )
+          (then
+            (local.get $start)
+            (local.get $start)
+            (local.get $step)
+            (call $add)
+            (local.get $end)
+            (local.get $step)
+            (call $range)
+            (call $Cons)
+          )
+          (else
+            (unreachable)
+          )
+        )
+      )
+    )
+  )
+  (export
+    "range"
+    (func $range)
+  )
+  (func
+    $_removeMultiples
+    (param $list i32)
+    (param $n i32)
+    (param $result i32)
+    (result i32)
+    (local $var_9428 i32)
+    (local $var_90871 i32)
+    (local $head i32)
+    (local $tail i32)
+    (local.set
+      $var_9428
+      (local.get $list)
+    )
+    (if
+      (result i32)
+      (i32.eq
+        (i32.load
+          (local.get $var_9428)
+        )
+        (i32.const 2)
+      )
+      (then
+        (local.set
+          $head
+          (i32.load
+            (i32.add
+              (local.get $var_9428)
+              (i32.const 4)
+            )
+          )
+        )
+        (local.set
+          $tail
+          (i32.load
+            (i32.add
+              (local.get $var_9428)
+              (i32.const 8)
+            )
+          )
+        )
+        (local.set
+          $var_90871
+          (local.get $head)
+          (local.get $n)
+          (call $rem)
+          (call $isZero)
+        )
+        (if
+          (result i32)
+          (i32.eq
+            (i32.load
+              (local.get $var_90871)
+            )
+            (i32.const 1)
+          )
+          (then
+            (local.get $tail)
+            (local.get $n)
+            (local.get $result)
+            (call $_removeMultiples)
+          )
+          (else
+            (if
+              (result i32)
+              (i32.eq
+                (i32.load
+                  (local.get $var_90871)
+                )
+                (i32.const 0)
+              )
+              (then
+                (local.get $head)
+                (local.get $tail)
+                (local.get $n)
+                (local.get $result)
+                (call $_removeMultiples)
+                (call $Cons)
+              )
+              (else
+                (unreachable)
+              )
+            )
+          )
+        )
+      )
+      (else
+        (if
+          (result i32)
+          (i32.eq
+            (i32.load
+              (local.get $var_9428)
+            )
+            (i32.const 3)
+          )
+          (then
+            (local.get $result)
+          )
+          (else
+            (unreachable)
+          )
+        )
+      )
+    )
+  )
+  (export
+    "_removeMultiples"
+    (func $_removeMultiples)
+  )
+  (func
+    $removeMultiples
+    (param $list i32)
+    (param $n i32)
+    (result i32)
+    (local.get $list)
+    (local.get $n)
+    (call $Nil)
+    (call $_removeMultiples)
+  )
+  (export
+    "removeMultiples"
+    (func $removeMultiples)
+  )
+  (func
+    $_eratosthenes
+    (param $list i32)
+    (param $result i32)
+    (result i32)
+    (local $var_26745 i32)
+    (local $head i32)
+    (local $tail i32)
+    (local.set
+      $var_26745
+      (local.get $list)
+    )
+    (if
+      (result i32)
+      (i32.eq
+        (i32.load
+          (local.get $var_26745)
+        )
+        (i32.const 2)
+      )
+      (then
+        (local.set
+          $head
+          (i32.load
+            (i32.add
+              (local.get $var_26745)
+              (i32.const 4)
+            )
+          )
+        )
+        (local.set
+          $tail
+          (i32.load
+            (i32.add
+              (local.get $var_26745)
+              (i32.const 8)
+            )
+          )
+        )
+        (local.get $tail)
+        (local.get $head)
+        (call $removeMultiples)
+        (local.get $head)
+        (local.get $result)
+        (call $Cons)
+        (call $_eratosthenes)
+      )
+      (else
+        (if
+          (result i32)
+          (i32.eq
+            (i32.load
+              (local.get $var_26745)
+            )
+            (i32.const 3)
+          )
+          (then
+            (local.get $result)
+          )
+          (else
+            (unreachable)
+          )
+        )
+      )
+    )
+  )
+  (export
+    "_eratosthenes"
+    (func $_eratosthenes)
+  )
+  (func
+    $eratosthenes
+    (param $n i32)
+    (result i32)
+    (local $list i32)
+    (i32.const 2)
+    (local.get $n)
+    (i32.const 1)
+    (call $range)
+    (local.set $list)
+    (local.get $list)
+    (call $Nil)
+    (call $_eratosthenes)
+  )
+  (export
+    "eratosthenes"
+    (func $eratosthenes)
+  )
+  (func
+    $printInt
+    (param $n i32)
+    (param $retvalue i32)
+    (result i32)
+    (local $nothing i32)
+    (local.get $n)
     (call $showI32)
     (call $printString)
+    (local.set $nothing)
+    (local.get $retvalue)
+  )
+  (export
+    "printInt"
+    (func $printInt)
+  )
+  (func
+    $printListOfInts
+    (param $list i32)
+    (result i32)
+    (local $var_10466 i32)
+    (local $n i32)
+    (local $tail i32)
+    (local.set
+      $var_10466
+      (local.get $list)
+    )
+    (if
+      (result i32)
+      (i32.eq
+        (i32.load
+          (local.get $var_10466)
+        )
+        (i32.const 2)
+      )
+      (then
+        (local.set
+          $n
+          (i32.load
+            (i32.add
+              (local.get $var_10466)
+              (i32.const 4)
+            )
+          )
+        )
+        (local.set
+          $tail
+          (i32.load
+            (i32.add
+              (local.get $var_10466)
+              (i32.const 8)
+            )
+          )
+        )
+        (local.get $n)
+        (local.get $tail)
+        (call $printListOfInts)
+        (call $printInt)
+      )
+      (else
+        (if
+          (result i32)
+          (i32.eq
+            (i32.load
+              (local.get $var_10466)
+            )
+            (i32.const 3)
+          )
+          (then
+            (i32.const 0)
+          )
+          (else
+            (unreachable)
+          )
+        )
+      )
+    )
+  )
+  (export
+    "printListOfInts"
+    (func $printListOfInts)
+  )
+  (func
+    $_start
+    (result i32)
+    (i32.const 100)
+    (call $eratosthenes)
+    (call $printListOfInts)
   )
   (export
     "_start"
