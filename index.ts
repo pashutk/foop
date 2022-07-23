@@ -1,6 +1,57 @@
 import * as parser from "./parser";
 import { compileModule, renderSexp } from "./wasm";
 import { argv } from "process";
+import { readFileSync, writeFileSync } from "fs";
+import * as Path from "path";
+import { beautify } from "s-exify";
+import Wabt from "wabt";
+
+const args = argv.slice(2).filter((a) => !a.startsWith("--"));
+const flags = argv.slice(2).filter((a) => a.startsWith("--"));
+
+const main = async () => {
+  if (args.length === 0) {
+    throw new Error("Provide entrypoint");
+  }
+
+  const filename = args[0];
+  if (!filename) {
+    throw new Error("Provide entrypoint");
+  }
+  const path = Path.parse(filename);
+
+  const text = readFileSync(filename, { encoding: "utf8" });
+  const ast = parser.module(text);
+  if (ast.type === "failure") {
+    throw new Error(`Parsing failed: expected\n\n${ast.expected}\n\nbut got\n\n${ast.input}`);
+  }
+  const module = compileModule(ast.value);
+  const watContent = beautify(renderSexp(module));
+
+  const isReturningWat = flags.includes("--wat");
+  let content: { type: "wat"; value: string } | { type: "wasm"; value: Buffer } = {
+    type: "wat",
+    value: watContent,
+  };
+  if (!isReturningWat) {
+    const wabt = await Wabt();
+    const wasm = wabt.parseWat("", content.value);
+    content = {
+      type: "wasm",
+      value: Buffer.from(wasm.toBinary({ write_debug_names: true }).buffer),
+    };
+  }
+
+  const isWritingToSdout = flags.includes("--stdout");
+  if (isWritingToSdout) {
+    console.log(content.value.toString());
+  } else {
+    const retFilename = `./${path.name}.${isReturningWat ? "wat" : "wasm"}`;
+    writeFileSync(retFilename, content.value, {});
+  }
+};
+
+main();
 
 const stdlib = `
 wasm add(a, b) {
@@ -529,17 +580,3 @@ function main() {
   add(inc(2), 3)
 }
 `;
-
-const ast = parser.module(code);
-// const ast = parser.test("abdd");
-
-if (ast.type === "failure") {
-  console.error(ast);
-} else {
-  if (argv[2] === "ast") {
-    console.dir(ast.value, { depth: null });
-  } else {
-    const module = compileModule(ast.value);
-    console.log(renderSexp(module));
-  }
-}
