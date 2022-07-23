@@ -25,7 +25,7 @@ const main = async () => {
   if (ast.type === "failure") {
     throw new Error(`Parsing failed: expected\n\n${ast.expected}\n\nbut got\n\n${ast.input}`);
   }
-  const module = compileModule(ast.value);
+  const module = compileModule(ast.value.tlds);
   const watContent = beautify(renderSexp(module));
 
   const isReturningWat = flags.includes("--wat");
@@ -51,7 +51,7 @@ const main = async () => {
   }
 };
 
-main();
+main().then(console.log).catch(console.error);
 
 const stdlib = `
 wasm add(a, b) {

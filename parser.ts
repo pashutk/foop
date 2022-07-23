@@ -556,8 +556,44 @@ const topLevelDefinition: Parser<TopLevelDefinition> = oneOf([
   ffiDefinitionParser,
 ]);
 
-export const module = bind(trimLeft(many1(topLevelDefinition)), (result) =>
-  bind(eof, () => of(result))
+type ImportDeclaration = T<"ImportDeclaration"> & {
+  identifiers: string[];
+  from: ImportPath;
+};
+
+type ImportPathRelative = T<"ImportPathRelative"> & {
+  path: string;
+};
+
+type ImportPath = ImportPathRelative;
+
+const importPathParser: Parser<ImportPath> = map(
+  seq([oneOf([string("./"), string("../")]), many1(or(letter, char("/")))]),
+  ([prefix, pathLetters]) => ({
+    _type: "ImportPathRelative",
+    path: prefix + pathLetters.join(""),
+  })
 );
 
-export const test = seq([symbol("a"), symbol("b"), optional(symbol("c")), symbol("d"), eof]);
+export const importDefinitionParser: Parser<ImportDeclaration> = map(
+  seq([
+    symbol("import"),
+    sepBy1(identificatorName, symbol(",")),
+    symbol("from"),
+    trimLeft(importPathParser),
+  ]),
+  ([_import, identifiers, _from, from]) => ({
+    _type: "ImportDeclaration",
+    identifiers,
+    from,
+  })
+);
+
+type Module = {
+  imports: ImportDeclaration[];
+  tlds: TopLevelDefinition[];
+};
+
+export const module: Parser<Module> = bind(trimLeft(many(importDefinitionParser)), (imports) =>
+  trimLeft(bind(many1(topLevelDefinition), (tlds) => bind(eof, () => of({ imports, tlds }))))
+);
