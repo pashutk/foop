@@ -1,5 +1,10 @@
-import add from ./math
+import add, eq from ./math
+import True, False from ./Bool
 
 function _start() {
-  add(1, 2)
+  let val = add(1, 2)
+  match(eq(val, 3)) {
+    True => 1
+    False => 0
+  }
 }

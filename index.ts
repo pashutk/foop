@@ -9,6 +9,19 @@ import Wabt from "wabt";
 const args = argv.slice(2).filter((a) => !a.startsWith("--"));
 const flags = argv.slice(2).filter((a) => a.startsWith("--"));
 
+const parseModuleTree = (filename: string): parser.TopLevelDefinition[] => {
+  const text = readFileSync(filename, { encoding: "utf8" });
+  const ast = parser.module(text);
+  if (ast.type === "failure") {
+    throw new Error(`Parsing failed: expected\n\n${ast.expected}\n\nbut got\n\n${ast.input}`);
+  }
+  if (flags.includes("--ast")) {
+    console.dir(ast.value, { depth: null });
+  }
+  const { imports, tlds } = ast.value;
+  return tlds;
+};
+
 const main = async () => {
   if (args.length === 0) {
     throw new Error("Provide entrypoint");
@@ -18,14 +31,8 @@ const main = async () => {
   if (!filename) {
     throw new Error("Provide entrypoint");
   }
-  const path = Path.parse(filename);
-
-  const text = readFileSync(filename, { encoding: "utf8" });
-  const ast = parser.module(text);
-  if (ast.type === "failure") {
-    throw new Error(`Parsing failed: expected\n\n${ast.expected}\n\nbut got\n\n${ast.input}`);
-  }
-  const module = compileModule(ast.value.tlds);
+  const modules = parseModuleTree(filename);
+  const module = compileModule(modules);
   const watContent = beautify(renderSexp(module));
 
   const isReturningWat = flags.includes("--wat");
@@ -46,6 +53,7 @@ const main = async () => {
   if (isWritingToSdout) {
     console.log(content.value.toString());
   } else {
+    const path = Path.parse(filename);
     const retFilename = `./${path.name}.${isReturningWat ? "wat" : "wasm"}`;
     writeFileSync(retFilename, content.value, {});
   }

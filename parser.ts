@@ -580,7 +580,7 @@ export const importDefinitionParser: Parser<ImportDeclaration> = map(
     symbol("import"),
     sepBy1(identificatorName, symbol(",")),
     symbol("from"),
-    trimLeft(importPathParser),
+    trimRight(importPathParser),
   ]),
   ([_import, identifiers, _from, from]) => ({
     _type: "ImportDeclaration",
@@ -594,6 +594,7 @@ type Module = {
   tlds: TopLevelDefinition[];
 };
 
-export const module: Parser<Module> = bind(trimLeft(many(importDefinitionParser)), (imports) =>
-  trimLeft(bind(many1(topLevelDefinition), (tlds) => bind(eof, () => of({ imports, tlds }))))
+export const module: Parser<Module> = map(
+  seq([sepBy(importDefinitionParser, spaces), trimLeft(many1(topLevelDefinition)), eof]),
+  ([imports, tlds]) => ({ imports, tlds })
 );
