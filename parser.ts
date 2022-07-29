@@ -271,6 +271,7 @@ export type FunctionDeclaration = T<"FunctionDeclaration"> & {
   name: string;
   params: Identificator[];
   body: FunctionBody;
+  exported: boolean;
 };
 
 export const isFunctionDeclaration = (a: { _type: string }): a is FunctionDeclaration =>
@@ -320,7 +321,7 @@ type FfiBody = T<
 
 export type FfiDeclaration = T<
   "FfiDeclaration",
-  { name: string; params: FfiParam[]; body: FfiBody }
+  { name: string; params: FfiParam[]; body: FfiBody; exported: boolean }
 >;
 
 export const isFfiDeclaration = (a: { _type: string }): a is FfiDeclaration =>
@@ -494,12 +495,19 @@ const functionBody: Parser<FunctionBody> = map(
 );
 
 const functionDefinitionParser: Parser<FunctionDeclaration> = map(
-  seq([functionKeyword, identificatorName, functionParameters, functionBody]),
-  ([_keyword, name, params, body]) => ({
+  seq([
+    optional(symbol("export")),
+    functionKeyword,
+    identificatorName,
+    functionParameters,
+    functionBody,
+  ]),
+  ([oExport, _keyword, name, params, body]) => ({
     _type: "FunctionDeclaration",
     name,
     params,
     body,
+    exported: oExport.type === "Some",
   })
 );
 
@@ -532,12 +540,13 @@ const enumDefinitionParser: Parser<EnumDeclaration> = map(
 
 const ffiDefinitionParser: Parser<FfiDeclaration> = map(
   seq([
+    optional(symbol("export")),
     symbol("wasm"),
     identificatorName,
     betweenParens(sepBy(identificatorName, symbol(","))),
     betweenBraces(many(notChar("}"))),
   ]),
-  ([_, name, params, body]) => ({
+  ([oExport, _, name, params, body]) => ({
     _type: "FfiDeclaration",
     name,
     params: params.map((name) => ({ _type: "FfiParam", name })),
@@ -545,6 +554,7 @@ const ffiDefinitionParser: Parser<FfiDeclaration> = map(
       _type: "FfiBody",
       content: body.join(""),
     },
+    exported: oExport.type === "Some",
   })
 );
 
