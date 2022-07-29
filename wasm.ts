@@ -174,10 +174,9 @@ const compileFunctionDefinition = (ctx: Ctx) => (fn: FunctionDeclaration) => {
 
   const funcExpression = sexp("func", ...def);
 
-  // Every function is exported by its original name
-  const exportExpression = sexp("export", `"${fn.name}"`, sexp("func", "$" + fn.name));
-
-  return [funcExpression, exportExpression];
+  return [funcExpression].concat(
+    fn.exported ? [sexp("export", `"${fn.name}"`, sexp("func", "$" + fn.name))] : []
+  );
 };
 
 const compileFfiDefinition = (ffi: FfiDeclaration): SExp[] => {

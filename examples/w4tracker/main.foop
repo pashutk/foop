@@ -1,7 +1,7 @@
 import add, eq from ./math
 import True, False from ./Bool
 
-function _start() {
+export function _start() {
   let val = add(1, 2)
   match(eq(val, 3)) {
     True => 1
