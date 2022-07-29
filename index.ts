@@ -9,17 +9,47 @@ import Wabt from "wabt";
 const args = argv.slice(2).filter((a) => !a.startsWith("--"));
 const flags = argv.slice(2).filter((a) => a.startsWith("--"));
 
+type ModuleFullPath = string;
+type Deps = {
+  entrypointFullPath: string;
+  deps: Map<
+    ModuleFullPath,
+    {
+      tlds: parser.TopLevelDefinition[];
+      imports: ModuleFullPath[];
+    }
+  >;
+};
+
+const getDepsMap = (entryPointFilename: string): Deps => {
+  const fileFullPath = Path.resolve(entryPointFilename);
+  const depsMap: Deps = { entrypointFullPath: fileFullPath, deps: new Map() };
+  const queue = [fileFullPath];
+  while (queue.length !== 0) {
+    const absolutePath = queue.shift()!;
+    if (depsMap.deps.has(absolutePath)) {
+      continue;
+    }
+    const parsedPath = Path.parse(absolutePath);
+    const text = readFileSync(absolutePath, { encoding: "utf8" });
+    const ast = parser.module(text);
+    if (ast.type === "failure") {
+      throw new Error(
+        `Parsing of path\n\n${absolutePath}\n\nfailed: expected\n\n${ast.expected}\n\nbut got\n\n${ast.input}`
+      );
+    }
+    const imports = ast.value.imports.map(({ from }) =>
+      Path.resolve(parsedPath.dir, from.path + ".foop")
+    );
+    depsMap.deps.set(absolutePath, { tlds: ast.value.tlds, imports });
+    queue.push(...imports);
+  }
+  return depsMap;
+};
+
 const parseModuleTree = (filename: string): parser.TopLevelDefinition[] => {
-  const text = readFileSync(filename, { encoding: "utf8" });
-  const ast = parser.module(text);
-  if (ast.type === "failure") {
-    throw new Error(`Parsing failed: expected\n\n${ast.expected}\n\nbut got\n\n${ast.input}`);
-  }
-  if (flags.includes("--ast")) {
-    console.dir(ast.value, { depth: null });
-  }
-  const { imports, tlds } = ast.value;
-  return tlds;
+  const { deps } = getDepsMap(filename);
+  return Array.from(deps.values()).flatMap(({ tlds }) => tlds);
 };
 
 const main = async () => {

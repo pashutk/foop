@@ -1,6 +1,6 @@
 import True, False from ./Bool
 
-export wasm add(a, b) {
+wasm add(a, b) {
   (i32.add (local.get $a) (local.get $b))
 }
 
@@ -8,7 +8,7 @@ wasm eqNumeric(a, b) {
   (i32.eq (local.get $a) (local.get $b))
 }
 
-export function eq(a, b) {
+function eq(a, b) {
   match(eqNumeric(a, b)) {
     1 => True
     otherwise => False

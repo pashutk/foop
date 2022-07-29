@@ -75,16 +75,62 @@
     (local.get $_result)
   )
   (func
+    $False
+    (result i32)
+    (local $struct_start_address i32)
+    (i32.const 4)
+    (call $mem_alloc)
+    (local.set $struct_start_address)
+    (i32.store
+      (local.get $struct_start_address)
+      (i32.const 0)
+    )
+    (local.get $struct_start_address)
+  )
+  (func
+    $True
+    (result i32)
+    (local $struct_start_address i32)
+    (i32.const 4)
+    (call $mem_alloc)
+    (local.set $struct_start_address)
+    (i32.store
+      (local.get $struct_start_address)
+      (i32.const 1)
+    )
+    (local.get $struct_start_address)
+  )
+  (func
+    $add
+    (param $a i32)
+    (param $b i32)
+    (result i32)
+    (i32.add
+      (local.get $a)
+      (local.get $b)
+    )
+  )
+  (func
+    $eqNumeric
+    (param $a i32)
+    (param $b i32)
+    (result i32)
+    (i32.eq
+      (local.get $a)
+      (local.get $b)
+    )
+  )
+  (func
     $_start
     (result i32)
     (local $val i32)
-    (local $var_74379 i32)
+    (local $var_85390 i32)
     (i32.const 1)
     (i32.const 2)
     (call $add)
     (local.set $val)
     (local.set
-      $var_74379
+      $var_85390
       (local.get $val)
       (i32.const 3)
       (call $eq)
@@ -93,9 +139,9 @@
       (result i32)
       (i32.eq
         (i32.load
-          (local.get $var_74379)
+          (local.get $var_85390)
         )
-        (i32.const -1)
+        (i32.const 1)
       )
       (then
         (i32.const 1)
@@ -105,9 +151,9 @@
           (result i32)
           (i32.eq
             (i32.load
-              (local.get $var_74379)
+              (local.get $var_85390)
             )
-            (i32.const -1)
+            (i32.const 0)
           )
           (then
             (i32.const 0)
@@ -122,5 +168,44 @@
   (export
     "_start"
     (func $_start)
+  )
+  (func
+    $eq
+    (param $a i32)
+    (param $b i32)
+    (result i32)
+    (local $var_92109 i32)
+    (local.set
+      $var_92109
+      (local.get $a)
+      (local.get $b)
+      (call $eqNumeric)
+    )
+    (if
+      (result i32)
+      (i32.eq
+        (local.get $var_92109)
+        (i32.const 1)
+      )
+      (then
+        (call $True)
+      )
+      (else
+        (if
+          (result i32)
+          (i32.const 1)
+          (then
+            (call $False)
+          )
+          (else
+            (unreachable)
+          )
+        )
+      )
+    )
+  )
+  (export
+    "eq"
+    (func $eq)
   )
 )
