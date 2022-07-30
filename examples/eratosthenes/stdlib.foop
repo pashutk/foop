@@ -1,0 +1,153 @@
+import List from ./list
+
+wasm add(a, b) {
+  (i32.add (local.get $a) (local.get $b))
+}
+
+wasm sub(a, b) {
+  (i32.sub (local.get $a) (local.get $b))
+}
+
+wasm eq(a, b) {
+  (i32.eq (local.get $a) (local.get $b))
+}
+
+function isZero(a) {
+  match(eq(a, 0)) {
+    1 => True
+    otherwise => False
+  }
+}
+
+wasm _lt(a, b) {
+  (i32.lt_s (local.get $a) (local.get $b))
+}
+
+wasm _ge(a, b) {
+  (i32.ge_s (local.get $a) (local.get $b))
+}
+
+enum Bool {
+  False
+  True
+}
+
+function equal(a, b) {
+  match(eq(a, b)) {
+    1 => True
+    otherwise => False
+  }
+}
+
+function lt(a, b) {
+  match(_lt(a, b)) {
+    1 => True
+    otherwise => False
+  }
+}
+
+function ge(a, b) {
+  match(_ge(a, b)) {
+    1 => True
+    otherwise => False
+  }
+}
+
+wasm rem(a, b) {
+  (i32.rem_s (local.get $a) (local.get $b))
+}
+
+function inc(a) {
+  add(a, 1)
+}
+
+wasm dec(a) {
+  (i32.sub (local.get $a) (i32.const -1))
+}
+
+wasm div(a, b) {
+  (i32.div_s (local.get $a) (local.get $b))
+}
+
+wasm malloc(bytes) {
+  (local.get $bytes)
+  (call $mem_alloc)
+}
+
+wasm setByte(address, value, retvalue) {
+  (i32.store (local.get $address) (local.get $value))
+  (local.get $retvalue)
+}
+
+function asciiListToStrInner(address, list, index) {
+  let byteAddr = add(address, index)
+  match(list) {
+    Cons(charCode, tail) => asciiListToStrInner(setByte(byteAddr, charCode, address), tail, inc(index))
+    Nil => address
+  }
+}
+
+function asciiListToStr(list) {
+  let memsize = add(listLength(list), 4)
+  let memstart = malloc(memsize)
+  let offset = rem(memstart, 4)
+  let address = add(memstart, sub(4, offset))
+  asciiListToStrInner(address, list, 0)
+}
+
+
+function sysListLengthInner__(list, result) {
+  match(list) {
+    Cons(a, tail) => sysListLengthInner__(tail, inc(result))
+    Nil => result
+  }
+}
+
+function listLength(list) {
+  sysListLengthInner__(list, 0)
+}
+
+enum IOVec {
+  IOVec(I32, I32)
+}
+
+wasm logIOVec(iovecAddress) {
+  (call $fd_write
+    (i32.const 1)
+    (local.get $iovecAddress)
+    (i32.const 1)
+    (i32.const 200)
+  )
+}
+
+function constructorDataAddress(constructorAddress) {
+  add(constructorAddress, 4)
+}
+
+function alignToFourBytes() {
+  let a = malloc(0)
+  let b = rem(a, 4)
+  let c = sub(4, b)
+  let d = malloc(c)
+  0
+}
+
+function printString(list) {
+  let stringDataAddress = asciiListToStr(list)
+  let nothing = alignToFourBytes()
+  let iovec = IOVec(stringDataAddress, listLength(list))
+  let iovecDataAddress = constructorDataAddress(iovec)
+  logIOVec(iovecDataAddress)
+}
+
+function _showI32(num, result) {
+  let charCode = add(48, num)
+  match(lt(num, 10)) {
+    True => Cons(charCode, result)
+    False => _showI32(div(num, 10), Cons(add(48, rem(num, 10)), result))
+  }
+}
+
+function showI32(num) {
+  _showI32(num, Cons(10, Nil))
+}

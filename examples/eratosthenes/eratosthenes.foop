@@ -1,0 +1,50 @@
+import everything from ./stdlib
+
+function range(start, end, step) {
+  match(ge(start, end)) {
+    True => Nil
+    False => Cons(start, range(add(start, step), end, step))
+  }
+}
+
+function _removeMultiples(list, n, result) {
+  match(list) {
+    Cons(head, tail) => match(isZero(rem(head, n))) {
+      True => _removeMultiples(tail, n, result)
+      False => Cons(head, _removeMultiples(tail, n, result))
+    }
+    Nil => result
+  }
+}
+
+function removeMultiples(list, n) {
+  _removeMultiples(list, n, Nil)
+}
+
+function _eratosthenes(list, result) {
+  match(list) {
+    Cons(head, tail) => _eratosthenes(removeMultiples(tail, head), Cons(head, result))
+    Nil => result
+  }
+}
+
+function eratosthenes(n) {
+  let list = range(2, n, 1)
+  _eratosthenes(list, Nil)
+}
+
+function printInt(n, retvalue) {
+  let nothing = printString(showI32(n))
+  retvalue
+}
+
+function printListOfInts(list) {
+  match(list) {
+    Cons(n, tail) => printInt(n, printListOfInts(tail))
+    Nil => 0
+  }
+}
+
+export function _start() {
+  printListOfInts(eratosthenes(100))
+}

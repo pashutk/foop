@@ -1,0 +1,4 @@
+enum List {
+  Cons(I32, I32)
+  Nil
+}
