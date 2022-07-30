@@ -1,0 +1,27 @@
+enum Bool {
+  False
+  True
+}
+
+wasm add(a, b) {
+  (i32.add (local.get $a) (local.get $b))
+}
+
+wasm eqNumeric(a, b) {
+  (i32.eq (local.get $a) (local.get $b))
+}
+
+function eq(a, b) {
+  match(eqNumeric(a, b)) {
+    1 => True
+    otherwise => False
+  }
+}
+
+export function _start() {
+  let value = 1.add(2)
+  match(value.eq(3)) {
+    True => 1
+    False => 0
+  }
+}

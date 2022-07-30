@@ -302,6 +302,7 @@ export type EnumDeclaration = T<
   {
     name: string;
     variants: EnumVariant[];
+    exported: boolean;
   }
 >;
 
@@ -422,12 +423,47 @@ type MatchExp = T<
   }
 >;
 
-const expressionParser: Parser<Expression> = oneOf([
-  (input: string) => matchExpParser(input),
-  functionApplication,
-  value,
-  identificator,
-]);
+const expressionParser: Parser<Expression> = map(
+  sepBy(
+    oneOf([(input: string) => matchExpParser(input), functionApplication, value, identificator]),
+    symbol(".")
+  ),
+  (exps) => {
+    const [head, ...tail] = exps;
+    if (tail.length === 0) {
+      return head!;
+    } else {
+      return tail.reduce((prev, curr): FunctionApplication => {
+        switch (curr._type) {
+          case "FunctionApplication":
+            return {
+              _type: "FunctionApplication",
+              name: curr.name,
+              params: [prev!].concat(curr.params),
+            };
+
+          case "Identificator":
+            if (curr.name === "match") {
+              throw new Error(`Type error: dot syntax call of match isn't supported yet`);
+            }
+            return {
+              _type: "FunctionApplication",
+              name: curr,
+              params: [prev!],
+            };
+
+          case "Int":
+          case "MatchExp":
+          case "Str":
+            throw new Error(`Type error: dot syntax call of "${curr.value}" as a method`);
+
+          default:
+            return absurd(curr);
+        }
+      }, head!);
+    }
+  }
+);
 
 const matcherConstructorPatternParser: Parser<MatcherConstructorPattern> = map(
   seq([identificatorName, optional(betweenParens(sepBy1(identificatorName, symbol(","))))]),
@@ -527,14 +563,16 @@ const enumVariantParser: Parser<EnumVariant> = map(
 
 const enumDefinitionParser: Parser<EnumDeclaration> = map(
   seq([
+    optional(symbol("export")),
     enumKeyword,
     identificatorName,
     between(symbol("{"), many1(enumVariantParser), symbol("}")),
   ]),
-  ([, name, variants]) => ({
+  ([oExport, , name, variants]) => ({
     _type: "EnumDeclaration",
     name,
     variants,
+    exported: oExport.type === "Some",
   })
 );
 

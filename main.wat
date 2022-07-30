@@ -121,62 +121,13 @@
     )
   )
   (func
-    $_start
-    (result i32)
-    (local $val i32)
-    (local $var_62990 i32)
-    (i32.const 1)
-    (i32.const 2)
-    (call $add)
-    (local.set $val)
-    (local.set
-      $var_62990
-      (local.get $val)
-      (i32.const 3)
-      (call $eq)
-    )
-    (if
-      (result i32)
-      (i32.eq
-        (i32.load
-          (local.get $var_62990)
-        )
-        (i32.const 1)
-      )
-      (then
-        (i32.const 1)
-      )
-      (else
-        (if
-          (result i32)
-          (i32.eq
-            (i32.load
-              (local.get $var_62990)
-            )
-            (i32.const 0)
-          )
-          (then
-            (i32.const 0)
-          )
-          (else
-            (unreachable)
-          )
-        )
-      )
-    )
-  )
-  (export
-    "_start"
-    (func $_start)
-  )
-  (func
     $eq
     (param $a i32)
     (param $b i32)
     (result i32)
-    (local $var_16262 i32)
+    (local $var_58998 i32)
     (local.set
-      $var_16262
+      $var_58998
       (local.get $a)
       (local.get $b)
       (call $eqNumeric)
@@ -184,7 +135,7 @@
     (if
       (result i32)
       (i32.eq
-        (local.get $var_16262)
+        (local.get $var_58998)
         (i32.const 1)
       )
       (then
@@ -204,8 +155,53 @@
       )
     )
   )
+  (func
+    $_start
+    (result i32)
+    (local $value i32)
+    (local $var_96950 i32)
+    (i32.const 1)
+    (i32.const 2)
+    (call $add)
+    (local.set $value)
+    (local.set
+      $var_96950
+      (local.get $value)
+      (i32.const 3)
+      (call $eq)
+    )
+    (if
+      (result i32)
+      (i32.eq
+        (i32.load
+          (local.get $var_96950)
+        )
+        (i32.const 1)
+      )
+      (then
+        (i32.const 1)
+      )
+      (else
+        (if
+          (result i32)
+          (i32.eq
+            (i32.load
+              (local.get $var_96950)
+            )
+            (i32.const 0)
+          )
+          (then
+            (i32.const 0)
+          )
+          (else
+            (unreachable)
+          )
+        )
+      )
+    )
+  )
   (export
-    "eq"
-    (func $eq)
+    "_start"
+    (func $_start)
   )
 )
