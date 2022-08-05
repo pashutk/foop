@@ -1,0 +1,7 @@
+function id(a) {
+  a
+}
+
+export function _start() {
+  id(2.id)
+}
