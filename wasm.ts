@@ -56,8 +56,8 @@ const compileExpression =
         const compiledMatch = cases.reduce((elseClause, [pattern, expression]) => {
           const { localNames, exp: compiledExp } = compileExpression(ctx)(expression);
           locals.push(...localNames);
-          if (pattern._type === "MatcherConstructorPattern") {
-            if (pattern.contructorName === "otherwise") {
+          switch (pattern._type) {
+            case "MatcherOtherwisePattern": {
               return sexp(
                 "if",
                 sexp("result", "i32"),
@@ -67,43 +67,52 @@ const compileExpression =
               );
             }
 
-            if (pattern.params) {
-              locals.push(...pattern.params);
+            case "MatcherConstructorPattern": {
+              if (pattern.params) {
+                locals.push(...pattern.params);
+              }
+              return sexp(
+                "if",
+                sexp("result", "i32"),
+                sexp(
+                  "i32.eq",
+                  sexp("i32.load", sexp("local.get", "$" + varName)),
+                  sexp(
+                    "i32.const",
+                    ctx.enums[pattern.contructorName]?.numericId.toString(10) ?? "-1"
+                  )
+                ),
+                sexp(
+                  "then",
+                  ...pattern.params.flatMap((name, index) => {
+                    const address = sexp(
+                      "i32.add",
+                      sexp("local.get", "$" + varName),
+                      sexp("i32.const", ((index + 1) * 4).toString(10))
+                    );
+                    return [sexp("local.set", "$" + name, sexp("i32.load", address))];
+                  }),
+                  ...compiledExp
+                ),
+                sexp("else", elseClause)
+              );
             }
-            return sexp(
-              "if",
-              sexp("result", "i32"),
-              sexp(
-                "i32.eq",
-                sexp("i32.load", sexp("local.get", "$" + varName)),
-                sexp("i32.const", ctx.enums[pattern.contructorName]?.numericId.toString(10) ?? "-1")
-              ),
-              sexp(
-                "then",
-                ...pattern.params.flatMap((name, index) => {
-                  const address = sexp(
-                    "i32.add",
-                    sexp("local.get", "$" + varName),
-                    sexp("i32.const", ((index + 1) * 4).toString(10))
-                  );
-                  return [sexp("local.set", "$" + name, sexp("i32.load", address))];
-                }),
-                ...compiledExp
-              ),
-              sexp("else", elseClause)
-            );
-          } else {
-            return sexp(
-              "if",
-              sexp("result", "i32"),
-              sexp(
-                "i32.eq",
-                sexp("local.get", "$" + varName),
-                sexp("i32.const", pattern.value.value)
-              ),
-              sexp("then", ...compiledExp),
-              sexp("else", elseClause)
-            );
+
+            case "MatcherValuePattern": {
+              return sexp(
+                "if",
+                sexp("result", "i32"),
+                sexp(
+                  "i32.eq",
+                  sexp("local.get", "$" + varName),
+                  sexp("i32.const", pattern.value.value)
+                ),
+                sexp("then", ...compiledExp),
+                sexp("else", elseClause)
+              );
+            }
+            default:
+              return absurd(pattern);
           }
         }, sexp("unreachable"));
 

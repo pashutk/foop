@@ -405,7 +405,9 @@ type MatcherConstructorPattern = T<
   }
 >;
 
-type MatcherPattern = MatcherConstructorPattern | MatcherValuePattern;
+type MatcherOtherwisePattern = T<"MatcherOtherwisePattern">;
+
+type MatcherPattern = MatcherConstructorPattern | MatcherValuePattern | MatcherOtherwisePattern;
 
 type MatcherExp = T<
   "MatcherExp",
@@ -479,10 +481,18 @@ const matcherValuePatternParser: Parser<MatcherValuePattern> = map(value, (value
   value,
 }));
 
-const matcherPatternParser: Parser<MatcherPattern> = or(
-  matcherConstructorPatternParser,
-  matcherValuePatternParser
+const matcherOtherwisePatterParser: Parser<MatcherOtherwisePattern> = map(
+  symbol("otherwise"),
+  () => ({
+    _type: "MatcherOtherwisePattern",
+  })
 );
+
+const matcherPatternParser: Parser<MatcherPattern> = oneOf([
+  matcherOtherwisePatterParser,
+  matcherConstructorPatternParser,
+  matcherValuePatternParser,
+]);
 
 const matcherParser: Parser<MatcherExp> = map(
   seq([matcherPatternParser, symbol("=>"), expressionParser]),
