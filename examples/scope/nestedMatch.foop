@@ -1,0 +1,15 @@
+enum Option {
+  None
+  Some(I32)
+}
+
+export function _start() {
+  let a = Some(Some(2))
+  match(a) {
+    Some(a) => match(a) {
+      Some(a) => a
+      None => 1
+    }
+    None => 0
+  }
+}
