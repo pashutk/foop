@@ -1,5 +1,5 @@
 import * as parser from "./parser";
-import { compileModule, renderSexp } from "./wasm";
+import { compileDeps, renderSexp } from "./wasm";
 import { argv } from "process";
 import { readFileSync, writeFileSync } from "fs";
 import * as Path from "path";
@@ -9,21 +9,9 @@ import Wabt from "wabt";
 const args = argv.slice(2).filter((a) => !a.startsWith("--"));
 const flags = argv.slice(2).filter((a) => a.startsWith("--"));
 
-type ModuleFullPath = string;
-type Deps = {
-  entrypointFullPath: string;
-  deps: Map<
-    ModuleFullPath,
-    {
-      tlds: parser.TopLevelDefinition[];
-      imports: ModuleFullPath[];
-    }
-  >;
-};
-
-const getDepsMap = (entryPointFilename: string): Deps => {
+const getDepsMap = (entryPointFilename: string): parser.Deps => {
   const fileFullPath = Path.resolve(entryPointFilename);
-  const depsMap: Deps = { entrypointFullPath: fileFullPath, deps: new Map() };
+  const depsMap: parser.Deps = { entrypointFullPath: fileFullPath, deps: new Map() };
   const queue = [fileFullPath];
   while (queue.length !== 0) {
     const absolutePath = queue.shift()!;
@@ -66,7 +54,8 @@ const main = async () => {
     console.dir(modules, { depth: null });
     return;
   }
-  const module = compileModule(modules);
+  const dependencies = getDepsMap(filename);
+  const module = compileDeps(dependencies);
   const watContent = beautify(renderSexp(module));
 
   const isReturningWat = flags.includes("--wat");

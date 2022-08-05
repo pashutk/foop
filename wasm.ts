@@ -1,4 +1,5 @@
 import {
+  Deps,
   Expression,
   FfiDeclaration,
   FunctionDeclaration,
@@ -44,7 +45,10 @@ const compileExpression =
         if (exp.name in ctx.enums) {
           return { localNames: [], exp: [sexp("call", "$" + exp.name)] };
         }
-        return { localNames: [], exp: [sexp("local.get", "$" + exp.name)] };
+        return {
+          localNames: [],
+          exp: [sexp("local.get", "$" + (ctx.replaceIdentifiers[exp.name] ?? exp.name))],
+        };
 
       // Currently match expr works only with constructors as an argument
       case "MatchExp": {
@@ -54,7 +58,19 @@ const compileExpression =
         cases.reverse();
         const locals: string[] = [];
         const compiledMatch = cases.reduce((elseClause, [pattern, expression]) => {
-          const { localNames, exp: compiledExp } = compileExpression(ctx)(expression);
+          const { localNames, exp: compiledExp } =
+            pattern._type === "MatcherConstructorPattern"
+              ? compileExpression({
+                  ...ctx,
+                  replaceIdentifiers: {
+                    ...ctx.replaceIdentifiers,
+                    ...Object.fromEntries(
+                      pattern.params.map((name) => [name, `${varName}_${name}`])
+                    ),
+                  },
+                })(expression)
+              : compileExpression(ctx)(expression);
+
           locals.push(...localNames);
           switch (pattern._type) {
             case "MatcherOtherwisePattern": {
@@ -69,7 +85,7 @@ const compileExpression =
 
             case "MatcherConstructorPattern": {
               if (pattern.params) {
-                locals.push(...pattern.params);
+                locals.push(...pattern.params.map((name) => `${varName}_${name}`));
               }
               return sexp(
                 "if",
@@ -90,7 +106,9 @@ const compileExpression =
                       sexp("local.get", "$" + varName),
                       sexp("i32.const", ((index + 1) * 4).toString(10))
                     );
-                    return [sexp("local.set", "$" + name, sexp("i32.load", address))];
+                    return [
+                      sexp("local.set", "$" + `${varName}_${name}`, sexp("i32.load", address)),
+                    ];
                   }),
                   ...compiledExp
                 ),
@@ -330,9 +348,10 @@ type Ctx = {
       params: WasmType[];
     }
   >;
+  replaceIdentifiers: Record<string, string>;
 };
 
-export const compileModule = (tlds: TopLevelDefinition[]): SExp => {
+const compileModule = (tlds: TopLevelDefinition[]): SExp => {
   const functions = tlds.filter(isFunctionDeclaration);
   const enumDeclarations = tlds.filter(isEnumDeclaration);
   const ffiDeclataions = tlds.filter(isFfiDeclaration);
@@ -351,7 +370,9 @@ export const compileModule = (tlds: TopLevelDefinition[]): SExp => {
 
   const ffiFunctions = ffiDeclataions.flatMap(compileFfiDefinition);
 
-  const expressions = functions.flatMap(compileFunctionDefinition({ enums: enumsRecord }));
+  const expressions = functions.flatMap(
+    compileFunctionDefinition({ enums: enumsRecord, replaceIdentifiers: {} })
+  );
   return sexp(
     "module",
     ...imports,
@@ -360,4 +381,9 @@ export const compileModule = (tlds: TopLevelDefinition[]): SExp => {
     ...ffiFunctions,
     ...expressions
   );
+};
+
+export const compileDeps = ({ deps }: Deps): SExp => {
+  const tlds = Array.from(deps.values()).flatMap(({ tlds }) => tlds);
+  return compileModule(tlds);
 };

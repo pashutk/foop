@@ -651,3 +651,15 @@ export const module: Parser<Module> = map(
   seq([sepBy(importDefinitionParser, spaces), trimLeft(many1(topLevelDefinition)), eof]),
   ([imports, tlds]) => ({ imports, tlds })
 );
+
+type ModuleFullPath = string;
+export type Deps = {
+  entrypointFullPath: string;
+  deps: Map<
+    ModuleFullPath,
+    {
+      tlds: TopLevelDefinition[];
+      imports: ModuleFullPath[];
+    }
+  >;
+};
