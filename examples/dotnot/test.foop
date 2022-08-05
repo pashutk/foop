@@ -1,0 +1,4 @@
+function printString(list) {
+  let nothing = alignToFourBytes()
+  nothing(1)
+}

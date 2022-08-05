@@ -421,7 +421,7 @@ type MatchExp = T<
 >;
 
 const expressionParser: Parser<Expression> = map(
-  sepBy(
+  sepBy1(
     oneOf([(input: string) => matchExpParser(input), functionApplication, value, identificator]),
     symbol(".")
   ),

@@ -40,11 +40,11 @@ function printInt(n, retvalue) {
 
 function printListOfInts(list) {
   match(list) {
-    Cons(n, tail) => printInt(n, printListOfInts(tail))
+    Cons(n, tail) => n.printInt(tail.printListOfInts)
     Nil => 0
   }
 }
 
 export function _start() {
-  printListOfInts(eratosthenes(100))
+  eratosthenes(100).printListOfInts
 }
