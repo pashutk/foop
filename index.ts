@@ -62,6 +62,10 @@ const main = async () => {
     throw new Error("Provide entrypoint");
   }
   const modules = parseModuleTree(filename);
+  if (flags.includes("--ast")) {
+    console.dir(modules, { depth: null });
+    return;
+  }
   const module = compileModule(modules);
   const watContent = beautify(renderSexp(module));
 

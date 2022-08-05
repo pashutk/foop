@@ -376,13 +376,8 @@ const value: Parser<Value> = trimRight(
   )
 );
 
-const functionApplicationArg: Parser<Expression> = or(
-  or(value, (input) => functionApplication(input)),
-  identificator
-);
-
 const functionApplication: Parser<FunctionApplication> = map(
-  seq([identificator, lparen, sepBy(functionApplicationArg, symbol(",")), rparen]),
+  seq([identificator, lparen, sepBy((input) => expressionParser(input), symbol(",")), rparen]),
   ([name, , params]) => ({
     _type: "FunctionApplication",
     name,
