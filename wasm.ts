@@ -383,7 +383,64 @@ const compileModule = (tlds: TopLevelDefinition[]): SExp => {
   );
 };
 
+const topologicalSortFrom = <A, NodeId extends string>(
+  xs: A[],
+  id: (a: A) => NodeId,
+  edges: (a: A) => NodeId[],
+  _start?: A
+): A[] | undefined => {
+  if (xs.length === 0) {
+    return [];
+  }
+
+  const resultIds: NodeId[] = [];
+  const visitedIds = new Set<NodeId>();
+
+  const first = xs.find((x) => edges(x).length === 0);
+  if (!first) {
+    return undefined;
+  }
+
+  resultIds.push(id(first));
+  visitedIds.add(id(first));
+
+  let retries = xs.length;
+
+  while (resultIds.length !== xs.length && retries > 0) {
+    for (const node of xs) {
+      const nid = id(node);
+      if (visitedIds.has(nid)) {
+        continue;
+      }
+
+      const nodeEdges = edges(node);
+      if (nodeEdges.every((edgeId) => visitedIds.has(edgeId))) {
+        const nid = id(node);
+        resultIds.push(nid);
+        visitedIds.add(nid);
+        break;
+      } else {
+        continue;
+      }
+    }
+    retries--;
+  }
+
+  const map = new Map(xs.map((x) => [id(x), x]));
+  return resultIds.map((nid) => map.get(nid)!);
+};
+
 export const compileDeps = ({ deps }: Deps): SExp => {
-  const tlds = Array.from(deps.values()).flatMap(({ tlds }) => tlds);
+  const depsWithIds = Array.from(deps.entries()).map(([key, value]) => ({ ...value, key }));
+  const sorted = topologicalSortFrom(
+    depsWithIds,
+    ({ key }) => key,
+    ({ imports }) => imports
+  );
+  if (!sorted) {
+    throw new Error("Error resolving deps");
+  }
+
+  const tlds = sorted.flatMap(({ tlds }) => tlds);
   return compileModule(tlds);
 };
