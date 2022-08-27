@@ -269,7 +269,8 @@ const identificator: Parser<Identificator> = map(identificatorName, Identificato
 
 export type FunctionDeclaration = T<"FunctionDeclaration"> & {
   name: string;
-  params: Identificator[];
+  params: FunctionParameter[];
+  returnType: WasmType | UnitType;
   body: FunctionBody;
   exported: boolean;
 };
@@ -277,17 +278,34 @@ export type FunctionDeclaration = T<"FunctionDeclaration"> & {
 export const isFunctionDeclaration = (a: { _type: string }): a is FunctionDeclaration =>
   a._type === "FunctionDeclaration";
 
-export type WasmType = T<
-  "WasmType",
-  {
-    type: "i32";
-  }
->;
+export type WasmType =
+  | T<
+      "WasmType",
+      {
+        type: "i32";
+      }
+    >
+  | T<
+      "WasmType",
+      {
+        type: "f32";
+      }
+    >;
 
-const WasmTypeParser: Parser<WasmType> = map(symbol("I32"), () => ({
-  _type: "WasmType",
-  type: "i32",
-}));
+const WasmType = (type: "i32" | "f32"): WasmType => ({ _type: "WasmType", type });
+
+const WasmTypeParser: Parser<WasmType> = map(oneOf([symbol("i32"), symbol("f32")]), (a) => {
+  if (a === "f32") {
+    return WasmType("f32");
+  }
+
+  return WasmType("i32");
+});
+
+type UnitType = T<"UnitType">;
+const UnitType = t("UnitType");
+
+const UnitTypeParser: Parser<UnitType> = map(symbol("()"), () => UnitType);
 
 type EnumVariant = T<
   "EnumVariant",
@@ -310,6 +328,7 @@ type FfiParam = T<
   "FfiParam",
   {
     name: string;
+    type: WasmType;
   }
 >;
 
@@ -322,7 +341,13 @@ type FfiBody = T<
 
 export type FfiDeclaration = T<
   "FfiDeclaration",
-  { name: string; params: FfiParam[]; body: FfiBody; exported: boolean }
+  {
+    name: string;
+    params: FfiParam[];
+    body: FfiBody;
+    returnType: WasmType | UnitType;
+    exported: boolean;
+  }
 >;
 
 export const isFfiDeclaration = (a: { _type: string }): a is FfiDeclaration =>
@@ -350,8 +375,23 @@ type Value = Int | Str;
 
 export type AST = FunctionDeclaration | Value;
 
-const functionParameters: Parser<Identificator[]> = betweenParens(
-  sepBy(identificator, symbol(","))
+type FunctionParameter = T<
+  "FunctionParameter",
+  {
+    name: string;
+    type: WasmType;
+  }
+>;
+
+const functionParameters: Parser<FunctionParameter[]> = betweenParens(
+  sepBy(
+    map(seq([identificator, WasmTypeParser]), ([{ name }, type]) => ({
+      _type: "FunctionParameter",
+      name,
+      type,
+    })),
+    symbol(",")
+  )
 );
 
 const digit = regex("digit", /\d/);
@@ -541,13 +581,15 @@ const functionDefinitionParser: Parser<FunctionDeclaration> = map(
     functionKeyword,
     identificatorName,
     functionParameters,
+    optional(or(WasmTypeParser, UnitTypeParser)),
     functionBody,
   ]),
-  ([oExport, _keyword, name, params, body]) => ({
+  ([oExport, _keyword, name, params, returnType, body]) => ({
     _type: "FunctionDeclaration",
     name,
     params,
     body,
+    returnType: returnType.type === "Some" ? returnType.value : WasmType("i32"),
     exported: oExport.type === "Some",
   })
 );
@@ -586,17 +628,19 @@ const ffiDefinitionParser: Parser<FfiDeclaration> = map(
     optional(symbol("export")),
     symbol("wasm"),
     identificatorName,
-    betweenParens(sepBy(identificatorName, symbol(","))),
+    functionParameters,
+    optional(or(WasmTypeParser, UnitTypeParser)),
     betweenBraces(many(notChar("}"))),
   ]),
-  ([oExport, _, name, params, body]) => ({
+  ([oExport, _, name, params, returnType, body]) => ({
     _type: "FfiDeclaration",
     name,
-    params: params.map((name) => ({ _type: "FfiParam", name })),
+    params: params.map(({ name, type }) => ({ _type: "FfiParam", name, type })),
     body: {
       _type: "FfiBody",
       content: body.join(""),
     },
+    returnType: returnType.type === "Some" ? returnType.value : WasmType("i32"),
     exported: oExport.type === "Some",
   })
 );

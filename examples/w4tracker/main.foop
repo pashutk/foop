@@ -1,10 +1,38 @@
-import add, eq from ./math
-import True, False from ./Bool
+import sin from ./math
 
-export function _start() {
-  let val = add(1, 2)
-  match(eq(val, 3)) {
-    True => 1
-    False => 0
-  }
+wasm rectR(x i32, y i32, w i32, h i32) () {
+  (local.get $x)
+  (local.get $y)
+  (local.get $w)
+  (local.get $h)
+  (call $rect)
+}
+
+wasm clock(address i32) i32 {
+  (local $newclock i32)
+
+  (i32.add
+    (i32.load16_u (local.get $address))
+    (i32.const 1))
+  (local.set $newclock)
+
+  (i32.store16
+    (local.get $address)
+    (local.get $newclock)
+  )
+
+  (local.get $newclock)
+}
+
+wasm divU(a i32, b i32) i32 {
+  (i32.div_u (local.get $a) (local.get $b))
+}
+
+export function update() i32 {
+  let clockAddress = 64
+  let c = clock(clockAddress)
+  let x = divU(c, 30)
+  let a = rectR(x, 10, 32, 32)
+  let g = sin(123)
+  0
 }

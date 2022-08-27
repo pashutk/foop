@@ -1,16 +1,20 @@
 import True, False from ./Bool
 
-export wasm add(a, b) {
+export wasm add(a i32, b i32) i32 {
   (i32.add (local.get $a) (local.get $b))
 }
 
-wasm eqNumeric(a, b) {
+wasm eqNumeric(a i32, b i32) i32 {
   (i32.eq (local.get $a) (local.get $b))
 }
 
-export function eq(a, b) {
+export function eq(a i32, b i32) i32 {
   match(eqNumeric(a, b)) {
     1 => True
     otherwise => False
   }
+}
+
+wasm sin(x f32) f32 {
+  (f32.const 1)
 }

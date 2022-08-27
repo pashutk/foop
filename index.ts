@@ -55,7 +55,14 @@ const main = async () => {
     return;
   }
   const dependencies = getDepsMap(filename);
-  const module = compileDeps(dependencies);
+  const includeWasiImports = flags.includes("--wasi");
+  const includeWasm4Imports = flags.includes("--wasm4");
+  const module = compileDeps(dependencies, {
+    imports: {
+      wasi: includeWasiImports,
+      wasm4: includeWasm4Imports,
+    },
+  });
   const watContent = beautify(renderSexp(module));
 
   const isReturningWat = flags.includes("--wat");

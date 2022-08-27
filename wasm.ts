@@ -168,10 +168,11 @@ const compileFunctionDefinition = (ctx: Ctx) => (fn: FunctionDeclaration) => {
 
   // Function name is $functionName
   def.push("$" + fn.name);
-  // Use named params as $param1, $param2. i32 only for now
-  fn.params.forEach(({ name }) => def.push(sexp("param", "$" + name, "i32")));
-  // Result is always i32 for now
-  def.push(sexp("result", "i32"));
+  // Use named params as $param1, $param2
+  fn.params.forEach(({ name, type }) => def.push(sexp("param", "$" + name, type.type)));
+  if (fn.returnType._type === "WasmType") {
+    def.push(sexp("result", fn.returnType.type));
+  }
 
   const compiledBindings = fn.body.bindings.map((b) => {
     const { localNames, exp } = compileExpression(ctx)(b.expression);
@@ -211,8 +212,8 @@ const compileFfiDefinition = (ffi: FfiDeclaration): SExp[] => {
     sexp(
       "func",
       "$" + ffi.name,
-      ...ffi.params.map((param) => sexp("param", "$" + param.name, "i32")),
-      sexp("result", "i32"),
+      ...ffi.params.map((param) => sexp("param", "$" + param.name, param.type.type)),
+      ...(ffi.returnType._type === "WasmType" ? [sexp("result", ffi.returnType.type)] : []),
       ffi.body.content
     ),
   ];
@@ -293,7 +294,7 @@ const memoryManagement = (): SExp[] => {
   ];
 };
 
-const imports: SExp[] = [
+const wasiImports: SExp[] = [
   // (import "wasi_unstable" "fd_write"
   //   (func $fd_write (param i32 i32 i32 i32)
   //                   (result i32)))
@@ -304,6 +305,107 @@ const imports: SExp[] = [
     sexp("func", "$fd_write", sexp("param", "i32", "i32", "i32", "i32"), sexp("result", "i32"))
   ),
 ];
+
+const wasm4Imports: SExp[] = [
+  // (; Copies pixels to the framebuffer. ;)
+  // (import "env" "blit" (func $blit (param i32 i32 i32 i32 i32 i32)))
+  sexp(
+    "import",
+    '"env"',
+    '"blit"',
+    sexp("func", "$blit", sexp("param", "i32", "i32", "i32", "i32", "i32", "i32"))
+  ),
+
+  // (; Copies a subregion within a larger sprite atlas to the framebuffer. ;)
+  // (import "env" "blitSub" (func $blitSub (param i32 i32 i32 i32 i32 i32 i32 i32 i32)))
+  sexp(
+    "import",
+    '"env"',
+    '"blitSub"',
+    sexp(
+      "func",
+      "$blitSub",
+      sexp("param", "i32", "i32", "i32", "i32", "i32", "i32", "i32", "i32", "i32")
+    )
+  ),
+
+  // (; Draws a line between two points. ;)
+  // (import "env" "line" (func $line (param i32 i32 i32 i32)))
+  sexp(
+    "import",
+    '"env"',
+    '"line"',
+    sexp("func", "$line", sexp("param", "i32", "i32", "i32", "i32"))
+  ),
+
+  // (; Draws a horizontal line. ;)
+  // (import "env" "hline" (func $hline (param i32 i32 i32)))
+  sexp("import", '"env"', '"hline"', sexp("func", "$hline", sexp("param", "i32", "i32", "i32"))),
+
+  // (; Draws a vertical line. ;)
+  // (import "env" "vline" (func $vline (param i32 i32 i32)))
+  sexp("import", '"env"', '"vline"', sexp("func", "$vline", sexp("param", "i32", "i32", "i32"))),
+
+  // (; Draws an oval (or circle). ;)
+  // (import "env" "oval" (func $oval (param i32 i32 i32 i32)))
+  sexp(
+    "import",
+    '"env"',
+    '"oval"',
+    sexp("func", "$oval", sexp("param", "i32", "i32", "i32", "i32"))
+  ),
+
+  // (; Draws a rectangle. ;)
+  // (import "env" "rect" (func $rect (param i32 i32 i32 i32)))
+  sexp(
+    "import",
+    '"env"',
+    '"rect"',
+    sexp("func", "$rect", sexp("param", "i32", "i32", "i32", "i32"))
+  ),
+
+  // (; Draws text using the built-in system font. ;)
+  // (import "env" "text" (func $text (param i32 i32 i32)))
+  sexp("import", '"env"', '"text"', sexp("func", "$text", sexp("param", "i32", "i32", "i32"))),
+
+  // ;; ┌───────────────────────────────────────────────────────────────────────────┐
+  // ;; │                                                                           │
+  // ;; │ Sound Functions                                                           │
+  // ;; │                                                                           │
+  // ;; └───────────────────────────────────────────────────────────────────────────┘
+  // (; Plays a sound tone. ;)
+  // (import "env" "tone" (func $tone (param i32 i32 i32 i32)))
+  sexp(
+    "import",
+    '"env"',
+    '"tone"',
+    sexp("func", "$tone", sexp("param", "i32", "i32", "i32", "i32"))
+  ),
+
+  // ;; ┌───────────────────────────────────────────────────────────────────────────┐
+  // ;; │                                                                           │
+  // ;; │ Storage Functions                                                         │
+  // ;; │                                                                           │
+  // ;; └───────────────────────────────────────────────────────────────────────────┘
+  // (; Reads up to `size` bytes from persistent storage into the pointer `dest`. ;)
+  // (import "env" "diskr" (func $diskr (param i32 i32)))
+  sexp("import", '"env"', '"diskr"', sexp("func", "$diskr", sexp("param", "i32", "i32"))),
+
+  // (; Writes up to `size` bytes from the pointer `src` into persistent storage. ;)
+  // (import "env" "diskw" (func $diskw (param i32 i32)))
+  sexp("import", '"env"', '"diskw"', sexp("func", "$diskw", sexp("param", "i32", "i32"))),
+
+  // (; Prints a message to the debug console. ;)
+  // (import "env" "trace" (func $trace (param i32)))
+  sexp("import", '"env"', '"trace"', sexp("func", "$trace", sexp("param", "i32"))),
+
+  // (; Prints a message to the debug console. ;)
+  // (import "env" "tracef" (func $tracef (param i32 i32)))
+  sexp("import", '"env"', '"tracef"', sexp("func", "$tracef", sexp("param", "i32", "i32"))),
+];
+
+const getImports = ({ wasi, wasm4 }: ImportsSettings): SExp[] =>
+  (wasi ? wasiImports : []).concat(wasm4 ? wasm4Imports : []);
 
 const compileEnumConstructor = (name: string, numericId: number, params: WasmType[]): SExp[] => {
   return [
@@ -351,7 +453,10 @@ type Ctx = {
   replaceIdentifiers: Record<string, string>;
 };
 
-const compileModule = (tlds: TopLevelDefinition[]): SExp => {
+const compileModule = (
+  tlds: TopLevelDefinition[],
+  { imports: importsSettings }: { imports: ImportsSettings }
+): SExp => {
   const functions = tlds.filter(isFunctionDeclaration);
   const enumDeclarations = tlds.filter(isEnumDeclaration);
   const ffiDeclataions = tlds.filter(isFfiDeclaration);
@@ -375,7 +480,7 @@ const compileModule = (tlds: TopLevelDefinition[]): SExp => {
   );
   return sexp(
     "module",
-    ...imports,
+    ...getImports(importsSettings),
     ...memoryManagement(),
     ...enums,
     ...ffiFunctions,
@@ -430,7 +535,12 @@ const topologicalSortFrom = <A, NodeId extends string>(
   return resultIds.map((nid) => map.get(nid)!);
 };
 
-export const compileDeps = ({ deps }: Deps): SExp => {
+type ImportsSettings = {
+  wasi: boolean;
+  wasm4: boolean;
+};
+
+export const compileDeps = ({ deps }: Deps, { imports }: { imports: ImportsSettings }): SExp => {
   const depsWithIds = Array.from(deps.entries()).map(([key, value]) => ({ ...value, key }));
   const sorted = topologicalSortFrom(
     depsWithIds,
@@ -442,5 +552,5 @@ export const compileDeps = ({ deps }: Deps): SExp => {
   }
 
   const tlds = sorted.flatMap(({ tlds }) => tlds);
-  return compileModule(tlds);
+  return compileModule(tlds, { imports });
 };

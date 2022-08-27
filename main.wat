@@ -1,16 +1,143 @@
 (module
   (import
-    "wasi_unstable"
-    "fd_write"
+    "env"
+    "blit"
     (func
-      $fd_write
+      $blit
+      (param
+        i32
+        i32
+        i32
+        i32
+        i32
+        i32
+      )
+    )
+  )
+  (import
+    "env"
+    "blitSub"
+    (func
+      $blitSub
+      (param
+        i32
+        i32
+        i32
+        i32
+        i32
+        i32
+        i32
+        i32
+        i32
+      )
+    )
+  )
+  (import
+    "env"
+    "line"
+    (func
+      $line
       (param
         i32
         i32
         i32
         i32
       )
-      (result i32)
+    )
+  )
+  (import
+    "env"
+    "hline"
+    (func
+      $hline
+      (param i32 i32 i32)
+    )
+  )
+  (import
+    "env"
+    "vline"
+    (func
+      $vline
+      (param i32 i32 i32)
+    )
+  )
+  (import
+    "env"
+    "oval"
+    (func
+      $oval
+      (param
+        i32
+        i32
+        i32
+        i32
+      )
+    )
+  )
+  (import
+    "env"
+    "rect"
+    (func
+      $rect
+      (param
+        i32
+        i32
+        i32
+        i32
+      )
+    )
+  )
+  (import
+    "env"
+    "text"
+    (func
+      $text
+      (param i32 i32 i32)
+    )
+  )
+  (import
+    "env"
+    "tone"
+    (func
+      $tone
+      (param
+        i32
+        i32
+        i32
+        i32
+      )
+    )
+  )
+  (import
+    "env"
+    "diskr"
+    (func
+      $diskr
+      (param i32 i32)
+    )
+  )
+  (import
+    "env"
+    "diskw"
+    (func
+      $diskw
+      (param i32 i32)
+    )
+  )
+  (import
+    "env"
+    "trace"
+    (func
+      $trace
+      (param i32)
+    )
+  )
+  (import
+    "env"
+    "tracef"
+    (func
+      $tracef
+      (param i32 i32)
     )
   )
   (memory $mem 1)
@@ -121,13 +248,59 @@
     )
   )
   (func
+    $sin
+    (param $x f32)
+    (result f32)
+    (f32.const 1)
+  )
+  (func
+    $rectR
+    (param $x i32)
+    (param $y i32)
+    (param $w i32)
+    (param $h i32)
+    (local.get $x)
+    (local.get $y)
+    (local.get $w)
+    (local.get $h)
+    (call $rect)
+  )
+  (func
+    $clock
+    (param $address i32)
+    (result i32)
+    (local $newclock i32)
+    (i32.add
+      (i32.load16_u
+        (local.get $address)
+      )
+      (i32.const 1)
+    )
+    (local.set $newclock)
+    (i32.store16
+      (local.get $address)
+      (local.get $newclock)
+    )
+    (local.get $newclock)
+  )
+  (func
+    $divU
+    (param $a i32)
+    (param $b i32)
+    (result i32)
+    (i32.div_u
+      (local.get $a)
+      (local.get $b)
+    )
+  )
+  (func
     $eq
     (param $a i32)
     (param $b i32)
     (result i32)
-    (local $var_58998 i32)
+    (local $var_59261 i32)
     (local.set
-      $var_58998
+      $var_59261
       (local.get $a)
       (local.get $b)
       (call $eqNumeric)
@@ -135,7 +308,7 @@
     (if
       (result i32)
       (i32.eq
-        (local.get $var_58998)
+        (local.get $var_59261)
         (i32.const 1)
       )
       (then
@@ -155,53 +328,40 @@
       )
     )
   )
+  (export
+    "eq"
+    (func $eq)
+  )
   (func
-    $_start
+    $update
     (result i32)
-    (local $value i32)
-    (local $var_96950 i32)
-    (i32.const 1)
-    (i32.const 2)
-    (call $add)
-    (local.set $value)
-    (local.set
-      $var_96950
-      (local.get $value)
-      (i32.const 3)
-      (call $eq)
-    )
-    (if
-      (result i32)
-      (i32.eq
-        (i32.load
-          (local.get $var_96950)
-        )
-        (i32.const 1)
-      )
-      (then
-        (i32.const 1)
-      )
-      (else
-        (if
-          (result i32)
-          (i32.eq
-            (i32.load
-              (local.get $var_96950)
-            )
-            (i32.const 0)
-          )
-          (then
-            (i32.const 0)
-          )
-          (else
-            (unreachable)
-          )
-        )
-      )
-    )
+    (local $clockAddress i32)
+    (local $c i32)
+    (local $x i32)
+    (local $a i32)
+    (local $g i32)
+    (i32.const 64)
+    (local.set $clockAddress)
+    (local.get $clockAddress)
+    (call $clock)
+    (local.set $c)
+    (local.get $c)
+    (i32.const 30)
+    (call $divU)
+    (local.set $x)
+    (local.get $x)
+    (i32.const 10)
+    (i32.const 32)
+    (i32.const 32)
+    (call $rectR)
+    (local.set $a)
+    (i32.const 123)
+    (call $sin)
+    (local.set $g)
+    (i32.const 0)
   )
   (export
-    "_start"
-    (func $_start)
+    "update"
+    (func $update)
   )
 )
