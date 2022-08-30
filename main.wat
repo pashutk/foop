@@ -251,7 +251,20 @@
     $sin
     (param $x f32)
     (result f32)
-    (f32.const 1)
+    (local $i i32)
+    (local $cur f32)
+    (local $acc f32)
+    (local $fact f32)
+    (local $pow f32)
+    (local.set
+      $i
+      (i32.const 1)
+    )
+    (local.set
+      $cur
+      (f32.const 1)
+    )
+    (local.get $cur)
   )
   (func
     $rectR
@@ -294,13 +307,21 @@
     )
   )
   (func
+    $truncF
+    (param $f f32)
+    (result i32)
+    (i32.trunc_f32_s
+      (local.get $f)
+    )
+  )
+  (func
     $eq
     (param $a i32)
     (param $b i32)
     (result i32)
-    (local $var_90285 i32)
+    (local $var_24709 i32)
     (local.set
-      $var_90285
+      $var_24709
       (local.get $a)
       (local.get $b)
       (call $eqNumeric)
@@ -308,7 +329,7 @@
     (if
       (result i32)
       (i32.eq
-        (local.get $var_90285)
+        (local.get $var_24709)
         (i32.const 1)
       )
       (then
@@ -337,16 +358,24 @@
     (local $clockAddress i32)
     (local $c i32)
     (local $x i32)
+    (local $s f32)
+    (local $strunc i32)
     (i32.const 64)
     (local.set $clockAddress)
     (local.get $clockAddress)
     (call $clock)
     (local.set $c)
     (local.get $c)
-    (i32.const 30)
+    (i32.const 2)
     (call $divU)
     (local.set $x)
-    (local.get $x)
+    (f32.const 1.0)
+    (call $sin)
+    (local.set $s)
+    (local.get $s)
+    (call $truncF)
+    (local.set $strunc)
+    (local.get $strunc)
     (i32.const 10)
     (i32.const 32)
     (i32.const 32)

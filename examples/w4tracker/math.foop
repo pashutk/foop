@@ -16,5 +16,14 @@ export function eq(a i32, b i32) i32 {
 }
 
 wasm sin(x f32) f32 {
-  (f32.const 1)
+  (local $i i32)
+  (local $cur f32)
+  (local $acc f32)
+  (local $fact f32)
+  (local $pow f32)
+
+  (local.set $i (i32.const 1))
+  (local.set $cur (f32.const 1))
+
+  (local.get $cur)
 }

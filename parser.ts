@@ -367,11 +367,18 @@ type Int = T<"Int"> & {
   value: string;
 };
 
+type Float = T<
+  "Float",
+  {
+    value: string;
+  }
+>;
+
 type Str = T<"Str"> & {
   value: string;
 };
 
-type Value = Int | Str;
+type Value = Int | Float | Str;
 
 export type AST = FunctionDeclaration | Value;
 
@@ -397,23 +404,33 @@ const functionParameters: Parser<FunctionParameter[]> = betweenParens(
 const digit = regex("digit", /\d/);
 
 const value: Parser<Value> = trimRight(
-  or(
-    map(many1(digit), (digits) => ({
-      _type: "Int",
-      value: digits.join(""),
-    })),
+  oneOf([
+    map(
+      seq([many1(digit), char("."), many1(digit)]),
+      ([as, _dot, bs]): Float => ({
+        _type: "Float",
+        value: as.join("") + "." + bs.join(""),
+      })
+    ),
+    map(
+      many1(digit),
+      (digits): Int => ({
+        _type: "Int",
+        value: digits.join(""),
+      })
+    ),
     map(
       between(
         symbol("'"),
         many(satisfy("ascii sym", (sym) => sym.charCodeAt(0) < 128 && sym !== "'")),
         char("'")
       ),
-      (strs) => ({
+      (strs): Str => ({
         _type: "Str",
         value: strs.join(""),
       })
-    )
-  )
+    ),
+  ])
 );
 
 const functionApplication: Parser<FunctionApplication> = map(
@@ -492,6 +509,7 @@ const expressionParser: Parser<Expression> = map(
           case "Int":
           case "MatchExp":
           case "Str":
+          case "Float":
             throw new Error(`Type error: dot syntax call of "${curr.value}" as a method`);
 
           default:

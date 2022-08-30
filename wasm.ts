@@ -27,6 +27,12 @@ const compileExpression =
       case "Int":
         return { localNames: [], exp: [sexp("i32.const", exp.value)] };
 
+      case "Float":
+        return {
+          localNames: [],
+          exp: [sexp("f32.const", exp.value)],
+        };
+
       case "Str":
         return {
           localNames: [],
@@ -576,6 +582,9 @@ const inferExpType = (exp: Expression, scope: Scope): WasmType => {
     case "Int":
     case "Str":
       return WasmType("i32");
+
+    case "Float":
+      return WasmType("f32");
 
     case "FunctionApplication": {
       const x = scope[exp.name.name];
