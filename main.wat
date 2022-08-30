@@ -298,9 +298,9 @@
     (param $a i32)
     (param $b i32)
     (result i32)
-    (local $var_59261 i32)
+    (local $var_90285 i32)
     (local.set
-      $var_59261
+      $var_90285
       (local.get $a)
       (local.get $b)
       (call $eqNumeric)
@@ -308,7 +308,7 @@
     (if
       (result i32)
       (i32.eq
-        (local.get $var_59261)
+        (local.get $var_90285)
         (i32.const 1)
       )
       (then
@@ -334,12 +334,9 @@
   )
   (func
     $update
-    (result i32)
     (local $clockAddress i32)
     (local $c i32)
     (local $x i32)
-    (local $a i32)
-    (local $g i32)
     (i32.const 64)
     (local.set $clockAddress)
     (local.get $clockAddress)
@@ -354,11 +351,6 @@
     (i32.const 32)
     (i32.const 32)
     (call $rectR)
-    (local.set $a)
-    (i32.const 123)
-    (call $sin)
-    (local.set $g)
-    (i32.const 0)
   )
   (export
     "update"

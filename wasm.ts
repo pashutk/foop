@@ -9,7 +9,7 @@ import {
   TopLevelDefinition,
   WasmType,
 } from "./parser";
-import { absurd } from "./utils";
+import { absurd, T } from "./utils";
 
 type Atom = string;
 
@@ -185,7 +185,7 @@ const compileFunctionDefinition = (ctx: Ctx) => (fn: FunctionDeclaration) => {
   });
   // declare let binding local vars
   fn.body.bindings.forEach((b) => {
-    def.push(sexp("local", "$" + b.name, "i32"));
+    def.push(sexp("local", "$" + b.name, b.type.type));
   });
 
   const compiledBody = compileExpression(ctx)(fn.body.expression);
@@ -553,4 +553,76 @@ export const compileDeps = ({ deps }: Deps, { imports }: { imports: ImportsSetti
 
   const tlds = sorted.flatMap(({ tlds }) => tlds);
   return compileModule(tlds, { imports });
+};
+
+type Declaration =
+  | T<
+      "Function",
+      {
+        returnType: WasmType;
+      }
+    >
+  | T<
+      "LetBinding",
+      {
+        type: WasmType;
+      }
+    >;
+
+type Scope = Record<string, Declaration>;
+
+const inferExpType = (exp: Expression, scope: Scope): WasmType => {
+  switch (exp._type) {
+    case "Int":
+    case "Str":
+      return WasmType("i32");
+
+    case "FunctionApplication": {
+      const x = scope[exp.name.name];
+      if (x === undefined) {
+        throw new Error(
+          `Failed to infer a type of function application ${exp.name.name}(): No declaration in current scope`
+        );
+      }
+
+      if (x._type !== "Function") {
+        throw new Error(
+          `Failed to infer a type of function application ${exp.name.name}(): Scope contains a declaration but it's not a function`
+        );
+      }
+
+      return x.returnType;
+    }
+
+    case "Identificator": {
+      const x = scope[exp.name];
+      if (x === undefined) {
+        throw new Error(
+          `Failed to infer a type of identifier ${exp.name}: No declaration in current scope`
+        );
+      }
+
+      if (x._type !== "LetBinding") {
+        throw new Error(
+          `Failed to infer a type of identifier ${exp.name}: Scope contains a declaration but it's not a let binding`
+        );
+      }
+
+      return x.type;
+    }
+
+    // TODO: Use all cases to determine return type instead of a first one only
+    case "MatchExp": {
+      const { cases } = exp;
+      const firstExpression = cases[0]?.expression;
+      if (!firstExpression) {
+        throw new Error(`Failed to infer a type of match expression: 0 cases`);
+      }
+
+      return inferExpType(firstExpression, scope);
+    }
+
+    default:
+      return absurd(exp);
+  }
 };

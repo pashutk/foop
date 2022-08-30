@@ -28,11 +28,9 @@ wasm divU(a i32, b i32) i32 {
   (i32.div_u (local.get $a) (local.get $b))
 }
 
-export function update() i32 {
+export function update() () {
   let clockAddress = 64
   let c = clock(clockAddress)
-  let x = divU(c, 30)
-  let a = rectR(x, 10, 32, 32)
-  let g = sin(123)
-  0
+  let x = divU(c, 2)
+  rectR(c, 10, 32, 32)
 }

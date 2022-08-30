@@ -292,7 +292,7 @@ export type WasmType =
       }
     >;
 
-const WasmType = (type: "i32" | "f32"): WasmType => ({ _type: "WasmType", type });
+export const WasmType = (type: "i32" | "f32"): WasmType => ({ _type: "WasmType", type });
 
 const WasmTypeParser: Parser<WasmType> = map(oneOf([symbol("i32"), symbol("f32")]), (a) => {
   if (a === "f32") {
@@ -550,6 +550,7 @@ const matchExpParser: Parser<MatchExp> = map(
 type LetBinding = T<"LetBinding"> & {
   name: string;
   expression: Expression;
+  type: WasmType;
 };
 
 type FunctionBody = T<"FunctionBody"> & {
@@ -558,10 +559,11 @@ type FunctionBody = T<"FunctionBody"> & {
 };
 
 const letBinding: Parser<LetBinding> = map(
-  seq([symbol("let"), identificatorName, symbol("="), expressionParser]),
-  ([_letKeyword, name, _eqSym, expression]) => ({
+  seq([symbol("let"), identificatorName, optional(WasmTypeParser), symbol("="), expressionParser]),
+  ([_letKeyword, name, type, _eqSym, expression]) => ({
     _type: "LetBinding",
     name,
+    type: type.type === "Some" ? type.value : WasmType("i32"),
     expression,
   })
 );
